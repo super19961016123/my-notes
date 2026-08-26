@@ -646,6 +646,7 @@ function handleHash(){
       state.note = m[1]; state.cat = f.cat.id;
       renderSidebar(); renderList(); renderNote();
       document.getElementById('contentpane').scrollTop = 0;
+      document.body.classList.add('reading');
     }
   } else if ((m = h.match(/^#\/cat\/([^/]+)$/))){
     openCategory(m[1]);
