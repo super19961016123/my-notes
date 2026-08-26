@@ -894,12 +894,12 @@ function parseMarkdown(text){
   }
   return html;
 }
-function stripMd(s){ return s.replace(/<[^>]+>/g,'').replace(/\{c:[^}]+\}|\{\/c\}|\{s:\d+\}|\{\/s\}/g,'').replace(/`/g,'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/\[|\]|\(|\)/g,'').replace(/^\s*[-*>#\d.)]+/gm,'').replace(/\s+/g,' ').trim(); }
+function stripMd(s){ return s.replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/\{c:[^}]+\}|\{\/c\}|\{s:\d+\}|\{\/s\}/g,'').replace(/`/g,'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/\[|\]|\(|\)/g,'').replace(/^\s*[-*>#\d.)]+/gm,'').replace(/\s+/g,' ').trim(); }
 function hasUnfinishedTasks(note){
   if (!note || !note.content) return false;
   if (note.format === 'html'){
-    var items = note.content.match(/<div class="task-item[^"]*">/g) || [];
-    return items.some(function(it){ return it.indexOf('done') === -1; });
+    var items = note.content.match(/<div[^>]*class\s*=\s*"?task-item[^">]*"?[^>]*>/gi) || [];
+    return items.some(function(it){ return !/done/i.test(it); });
   }
   return /^\s*[-*]\s*\[\s\]\s*/m.test(note.content);
 }
