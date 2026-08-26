@@ -183,6 +183,25 @@ a:hover{text-decoration:underline}
 }
 .tool-btn:hover{background:var(--surface-2);color:var(--accent)}
 .tool-btn svg{width:15px;height:15px;flex:none;opacity:.85}
+.sync-status{
+  font-size:11.5px;padding:8px 10px;border-radius:8px;margin-bottom:2px;
+  display:flex;align-items:center;gap:7px;line-height:1.5;
+}
+.sync-status .dot{width:8px;height:8px;border-radius:50%;flex:none}
+.sync-status.on{background:var(--accent-soft);color:var(--accent)}
+.sync-status.on .dot{background:var(--accent)}
+.sync-status.off{background:var(--surface-2);color:var(--muted)}
+.sync-status.off .dot{background:var(--muted)}
+.sync-status.error{background:var(--danger-soft);color:var(--danger)}
+.sync-status.error .dot{background:var(--danger)}
+.sync-status.loading{background:var(--amber-soft);color:var(--amber)}
+.sync-status.loading .dot{background:var(--amber);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.sync-desc{font-size:12.5px;color:var(--ink-soft);line-height:1.8;background:var(--surface-2);border-radius:9px;padding:11px 14px}
+.sync-desc b{color:var(--ink)}
+.sync-desc code{font-family:ui-monospace,Consolas,monospace;color:var(--accent)}
+.sync-owner{font-size:12px;color:var(--ink-soft)}
+.sync-btns{display:flex;flex-wrap:wrap;gap:8px}
 .sidebar-foot{
   margin-top:10px;padding:12px 10px 4px;
   border-top:1px solid var(--line);
@@ -475,6 +494,11 @@ body.drawer-open .scrim{display:block}
       </button>
       <input type="file" id="importFile" accept=".json,application/json" hidden>
     </div>
+    <div class="sync-status off" id="syncStatus" hidden><span class="dot"></span><span id="syncStatusText">云同步</span></div>
+    <button class="tool-btn" id="syncBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17.5 9.5 4.5 4.5 0 0 1 17 18H7Z"/><path d="m9 14 3-3 3 3M12 11v6"/></svg>
+      <span id="syncBtnLabel">云同步</span>
+    </button>
     <div class="sidebar-foot">你在网页里写的笔记保存在<br>当前设备浏览器中，仅自己可见<br>托管于 GitHub Pages · 全端可读</div>
   </aside>
 
@@ -526,6 +550,46 @@ body.drawer-open .scrim{display:block}
       <span class="spacer"></span>
       <button class="ghost-btn" id="edCancel">取消</button>
       <button class="primary-btn" id="edSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 云同步设置 ===== -->
+<div class="modal-mask" id="syncMask" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-label="云同步设置" style="max-width:520px">
+    <div class="modal-head">云同步 <span class="local-badge">多端同步</span></div>
+    <div class="modal-body">
+      <div id="syncSetup">
+        <div class="sync-desc">
+          开启后，笔记会<b>加密</b>存到你的 GitHub 仓库，任何设备输入同样的密码即可读写<b>同一份</b>笔记（手机写、电脑立刻能看到）。<br>
+          需要：你之前给我创建的那个 GitHub Token（以 <code>ghp_</code> 开头），以及一个<b>笔记密码</b>（用于加密，务必记牢——密码错了无法解开云端笔记）。
+        </div>
+        <div class="field">
+          <label for="syncToken">GitHub Token</label>
+          <input type="password" id="syncToken" placeholder="ghp_ 开头…" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="syncPassword">笔记密码（用于加密，请记牢）</label>
+          <input type="password" id="syncPassword" placeholder="设一个你能记住的密码" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="syncRepo">仓库名（一般不用改）</label>
+          <input type="text" id="syncRepo" value="my-notes" placeholder="my-notes">
+        </div>
+      </div>
+      <div id="syncPanel" hidden>
+        <div class="sync-desc" id="syncInfo">…</div>
+        <div class="sync-btns" style="margin-top:12px">
+          <button class="ghost-btn" id="syncPullBtn">从云端获取</button>
+          <button class="ghost-btn" id="syncPushBtn">上传到云端</button>
+          <button class="danger-btn" id="syncOffBtn">关闭云同步</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span class="spacer"></span>
+      <button class="ghost-btn" id="syncCancel">关闭</button>
+      <button class="primary-btn" id="syncSave" hidden>开启云同步</button>
     </div>
   </div>
 </div>
@@ -945,6 +1009,7 @@ function saveNote(){
   document.getElementById('contentpane').scrollTop = 0;
   updateHash();
   showToast(editor.mode === 'new' ? '已保存到本设备' : '修改已保存');
+  maybePush();
 }
 function deleteNote(){
   if (!editor.noteId) return;
@@ -960,6 +1025,7 @@ function deleteNote(){
   renderSidebar(); renderList(); renderNote(); updateHash();
   document.body.classList.remove('reading');
   showToast('笔记已删除');
+  maybePush();
 }
 
 /* ================= 分类与备份 ================= */
@@ -974,6 +1040,7 @@ function addCategory(){
   renderSidebar();
   openCategory(c.id);
   showToast('已新建分类：' + name);
+  maybePush();
 }
 function exportData(){
   var blob = new Blob([JSON.stringify(current, null, 2)], { type: 'application/json' });
@@ -999,11 +1066,240 @@ function importData(file){
       document.getElementById('searchInput').value = '';
       renderSidebar(); renderList(); renderNote(); updateHash();
       showToast('导入成功');
+      maybePush();
     } catch(e){
       showToast('导入失败：文件格式不正确');
     }
   };
   reader.readAsText(file);
+}
+
+/* ================= 云同步（GitHub 加密存储） ================= */
+var SYNC_KEY = 'mynotes-sync-config-v1';
+var DATA_PATH = 'notes-encrypted.json';
+var sync = loadSyncConfig();
+var syncStatus = 'off';
+var lastSha = null;
+
+function loadSyncConfig(){
+  try { var raw = localStorage.getItem(SYNC_KEY); if (raw) return JSON.parse(raw); } catch(e){}
+  return null;
+}
+function saveSyncConfig(cfg){
+  try { localStorage.setItem(SYNC_KEY, JSON.stringify(cfg)); } catch(e){}
+}
+function clearSyncConfig(){
+  try { localStorage.removeItem(SYNC_KEY); } catch(e){}
+}
+
+/* 加密：PBKDF2 派生密钥 + AES-GCM */
+function toB64(str){
+  var bytes = new TextEncoder().encode(str), bin = '';
+  for (var i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+function fromB64(b64){
+  var bin = atob(b64), u = new Uint8Array(bin.length);
+  for (var i=0;i<bin.length;i++) u[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(u);
+}
+function bufToB64(buf){
+  var bytes = new Uint8Array(buf), bin = '';
+  for (var i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+function b64ToU8(b64){
+  var bin = atob(b64), u = new Uint8Array(bin.length);
+  for (var i=0;i<bin.length;i++) u[i] = bin.charCodeAt(i);
+  return u;
+}
+async function deriveKey(password){
+  var enc = new TextEncoder();
+  var material = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt: enc.encode('mynotes-notes-salt-v1'), iterations: 150000, hash:'SHA-256' },
+    material,
+    { name:'AES-GCM', length:256 },
+    false, ['encrypt','decrypt']
+  );
+}
+async function encryptJson(obj, password){
+  var key = await deriveKey(password);
+  var iv = crypto.getRandomValues(new Uint8Array(12));
+  var data = await crypto.subtle.encrypt({ name:'AES-GCM', iv: iv }, key, new TextEncoder().encode(JSON.stringify(obj)));
+  return JSON.stringify({ v:1, iv: bufToB64(iv), data: bufToB64(data) });
+}
+async function decryptJson(payload, password){
+  var p = JSON.parse(payload);
+  var key = await deriveKey(password);
+  var plain = await crypto.subtle.decrypt({ name:'AES-GCM', iv: b64ToU8(p.iv) }, key, b64ToU8(p.data));
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+
+/* GitHub Contents API */
+async function ghApi(token, url, opts){
+  var headers = { 'Authorization':'Bearer '+token, 'Accept':'application/vnd.github+json' };
+  if (opts && opts.body) headers['Content-Type'] = 'application/json';
+  return fetch('https://api.github.com'+url, Object.assign({ method:'GET' }, opts, { headers: Object.assign(headers, (opts&&opts.headers)||{}) }));
+}
+async function getGhOwner(token){
+  var res = await ghApi(token, '/user');
+  if (!res.ok) throw new Error('Token 无效或无权访问');
+  return (await res.json()).login;
+}
+function syncRepo(){ return (sync && sync.repo) ? sync.repo : 'my-notes'; }
+async function ensureOwner(){
+  if (sync.owner) return sync.owner;
+  var owner = await getGhOwner(sync.token);
+  sync.owner = owner;
+  saveSyncConfig(sync);
+  return owner;
+}
+async function cloudPull(){
+  var owner = await ensureOwner();
+  var res = await ghApi(sync.token, '/repos/'+owner+'/'+syncRepo()+'/contents/'+DATA_PATH);
+  if (res.status === 404) return { exists:false };
+  if (!res.ok) throw new Error('云端读取失败');
+  var j = await res.json();
+  var data = await decryptJson(fromB64(j.content), sync.password);
+  lastSha = j.sha;
+  return { exists:true, data:data };
+}
+async function cloudPush(data){
+  var owner = await ensureOwner();
+  var encrypted = await encryptJson(data, sync.password);
+  var payload = { message:'update notes '+new Date().toISOString(), content: toB64(encrypted) };
+  if (lastSha){
+    payload.sha = lastSha;
+  } else {
+    var res = await ghApi(sync.token, '/repos/'+owner+'/'+syncRepo()+'/contents/'+DATA_PATH);
+    if (res.status === 200) payload.sha = (await res.json()).sha;
+  }
+  var putRes = await ghApi(sync.token, '/repos/'+owner+'/'+syncRepo()+'/contents/'+DATA_PATH, { method:'PUT', body: JSON.stringify(payload) });
+  if (!putRes.ok) throw new Error('云端写入失败');
+  lastSha = (await putRes.json()).content.sha;
+  return true;
+}
+
+/* 同步状态 UI */
+function setSyncStatus(state, text){
+  var el = document.getElementById('syncStatus');
+  var tx = document.getElementById('syncStatusText');
+  if (!el || !tx) return;
+  el.hidden = false;
+  el.className = 'sync-status ' + state;
+  tx.textContent = text;
+  syncStatus = state;
+}
+function hideSyncStatus(){
+  var el = document.getElementById('syncStatus');
+  if (el) el.hidden = true;
+}
+async function maybePush(){
+  if (!sync) return;
+  try {
+    await cloudPush(current);
+    setSyncStatus('on', '已同步到云端');
+  } catch(e){
+    setSyncStatus('error', '云端同步失败');
+  }
+}
+async function syncFromCloud(){
+  if (!sync) return;
+  setSyncStatus('loading', '正在从云端同步…');
+  try {
+    var r = await cloudPull();
+    if (r.exists){
+      current = r.data;
+      persist();
+      state.cat = 'all'; state.note = null; state.query = ''; state.tag = null;
+      document.getElementById('searchInput').value = '';
+      renderSidebar(); renderList(); renderNote(); updateHash();
+      setSyncStatus('on', '已从云端获取最新笔记');
+      showToast('已从云端同步');
+    } else {
+      setSyncStatus('on', '云端暂无数据，本地笔记会自动上传');
+    }
+  } catch(e){
+    setSyncStatus('error', '云端连接失败，当前为本地模式');
+    if (e && e.message && String(e.message).indexOf('解密') >= 0) showToast('密码错误，无法解密云端笔记');
+  }
+}
+
+/* 云同步设置弹窗 */
+function openSync(){
+  document.getElementById('syncMask').hidden = false;
+  renderSyncPanel();
+}
+function closeSync(){ document.getElementById('syncMask').hidden = true; }
+function renderSyncPanel(){
+  var setup = document.getElementById('syncSetup');
+  var panel = document.getElementById('syncPanel');
+  var saveBtn = document.getElementById('syncSave');
+  if (sync){
+    setup.hidden = true; panel.hidden = false; saveBtn.hidden = true;
+    document.getElementById('syncInfo').innerHTML =
+      '已连接：<b>' + escapeHtml(sync.owner || 'GitHub 账号') + '</b> / <b>' + escapeHtml(syncRepo()) + '</b> 仓库<br>笔记以加密形式存于 <code>' + DATA_PATH + '</code>，密码只有你知道。';
+  } else {
+    setup.hidden = false; panel.hidden = true; saveBtn.hidden = false;
+  }
+}
+async function enableSync(){
+  var token = document.getElementById('syncToken').value.trim();
+  var password = document.getElementById('syncPassword').value;
+  var repo = document.getElementById('syncRepo').value.trim() || 'my-notes';
+  if (!token){ showToast('请填写 GitHub Token'); return; }
+  if (!password){ showToast('请设置笔记密码'); return; }
+  if (password.length < 4){ showToast('密码至少 4 位'); return; }
+  setSyncStatus('loading', '正在连接 GitHub…');
+  try {
+    var owner = await getGhOwner(token);
+    sync = { token: token, password: password, repo: repo, owner: owner };
+    saveSyncConfig(sync);
+    closeSync();
+    renderSyncPanel();
+    await syncFromCloud();
+  } catch(e){
+    setSyncStatus('error', '连接失败：' + (e && e.message ? e.message : '请检查 Token'));
+  }
+}
+async function syncPullNow(){
+  setSyncStatus('loading', '正在获取…');
+  try {
+    var r = await cloudPull();
+    if (r.exists){
+      current = r.data;
+      persist();
+      state.cat='all'; state.note=null; state.query=''; state.tag=null;
+      document.getElementById('searchInput').value='';
+      renderSidebar(); renderList(); renderNote(); updateHash();
+      setSyncStatus('on', '已从云端获取最新笔记');
+    } else {
+      setSyncStatus('on', '云端暂无数据');
+    }
+  } catch(e){
+    setSyncStatus('error', '获取失败');
+  }
+}
+async function syncPushNow(){
+  setSyncStatus('loading', '正在上传…');
+  try {
+    await cloudPush(current);
+    setSyncStatus('on', '已上传到云端');
+    showToast('已上传到云端');
+  } catch(e){
+    setSyncStatus('error', '上传失败');
+  }
+}
+function disableSync(){
+  if (!confirm('关闭云同步？本设备上的配置将被清除，本地已有笔记会保留。')) return;
+  clearSyncConfig();
+  sync = null;
+  lastSha = null;
+  closeSync();
+  renderSyncPanel();
+  hideSyncStatus();
+  showToast('已关闭云同步');
 }
 
 /* ================= 事件绑定 ================= */
@@ -1072,6 +1368,17 @@ function bind(){
     this.value = '';
   });
 
+  /* 云同步 */
+  document.getElementById('syncBtn').addEventListener('click', openSync);
+  document.getElementById('syncCancel').addEventListener('click', closeSync);
+  document.getElementById('syncSave').addEventListener('click', enableSync);
+  document.getElementById('syncPullBtn').addEventListener('click', syncPullNow);
+  document.getElementById('syncPushBtn').addEventListener('click', syncPushNow);
+  document.getElementById('syncOffBtn').addEventListener('click', disableSync);
+  document.getElementById('syncMask').addEventListener('click', function(e){
+    if (e.target === this) closeSync();
+  });
+
   window.addEventListener('hashchange', handleHash);
 
   document.addEventListener('keydown', function(e){
@@ -1097,6 +1404,9 @@ function bind(){
   renderSidebar();
   handleHash();
   bind();
+  if (sync){
+    syncFromCloud();
+  }
 })();
 </script>
 </body>
