@@ -1267,6 +1267,7 @@ function toggleCollapse(id){
   if (c){ c.collapsed = !c.collapsed; persist(); renderSidebar(); }
 }
 function expandAll(){
+  normalizeData(current);
   current.categories.forEach(function(c){ c.collapsed = false; });
   persist();
   renderSidebar();
@@ -1361,7 +1362,7 @@ function importData(file){
       var d = JSON.parse(reader.result);
       if (!d || !Array.isArray(d.categories)) throw new Error('bad');
       if (!confirm('导入将用备份内容覆盖当前设备上的全部笔记，确定继续吗？')) return;
-      current = d;
+      current = normalizeData(d);
       persist();
       state.cat = 'all'; state.note = null; state.query = ''; state.tag = null;
       document.getElementById('searchInput').value = '';
@@ -1463,6 +1464,7 @@ async function cloudPull(){
   if (!res.ok) throw new Error('云端读取失败');
   var j = await res.json();
   var data = await decryptJson(fromB64(j.content), sync.password);
+  normalizeData(data);
   lastSha = j.sha;
   return { exists:true, data:data };
 }
