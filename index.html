@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>我的笔记 · 个人知识库</title>
+<meta name="description" content="个人笔记网站：分类整理、全文搜索、全端阅读。由豆包维护，托管于 GitHub Pages。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='4' y='3' width='16' height='18' rx='2' fill='%232f6b5a'/%3E%3Cpath d='M9 3v18' stroke='%23fffefb' stroke-width='1.5'/%3E%3Cpath d='M12 7h4M12 10.5h4M12 14h2.5' stroke='%23fffefb' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@600;700;900&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* ============ 设计令牌 ============ */
+:root{
+  --bg:#f5f2ea;
+  --surface:#fffefb;
+  --surface-2:#efece2;
+  --ink:#29241d;
+  --ink-soft:#5a5344;
+  --muted:#8d8578;
+  --line:#e3ddd0;
+  --accent:#2f6b5a;
+  --accent-ink:#ffffff;
+  --accent-soft:#e4efeb;
+  --amber:#b0802c;
+  --amber-soft:#f3ead7;
+  --shadow:0 1px 2px rgba(41,36,29,.05),0 8px 24px rgba(41,36,29,.06);
+  --shadow-lift:0 4px 10px rgba(41,36,29,.08),0 18px 44px rgba(41,36,29,.12);
+  --font-display:"Noto Serif SC","Songti SC","STSong","SimSun",Georgia,serif;
+  --font-body:"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",-apple-system,"Segoe UI",sans-serif;
+  --topbar-h:60px;
+}
+[data-theme="dark"]{
+  --bg:#17140f;
+  --surface:#201c16;
+  --surface-2:#2a251d;
+  --ink:#ece4d5;
+  --ink-soft:#c5bba6;
+  --muted:#938a79;
+  --line:#39332a;
+  --accent:#82b5a3;
+  --accent-ink:#10241d;
+  --accent-soft:#22332b;
+  --amber:#d3a14f;
+  --amber-soft:#3a3020;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+  --shadow-lift:0 4px 10px rgba(0,0,0,.4),0 18px 44px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--font-body);
+  line-height:1.7;
+  font-size:15px;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input{font-family:inherit}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+::selection{background:var(--amber-soft);color:var(--ink)}
+
+/* ============ 顶栏 ============ */
+.topbar{
+  position:sticky;top:0;z-index:40;
+  height:var(--topbar-h);
+  display:flex;align-items:center;gap:14px;
+  padding:0 18px;
+  background:color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:center;gap:10px;white-space:nowrap}
+.brand-mark{width:28px;height:28px;flex:none}
+.brand-text{
+  font-family:var(--font-display);
+  font-weight:700;font-size:17px;letter-spacing:.02em;
+}
+.brand-sub{color:var(--muted);font-size:12px;font-weight:400;font-family:var(--font-body);margin-left:2px}
+.searchbox{
+  flex:1;max-width:520px;margin:0 auto;
+  display:flex;align-items:center;gap:8px;
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:7px 12px;
+  transition:border-color .15s, box-shadow .15s;
+}
+.searchbox:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.searchbox svg{width:16px;height:16px;color:var(--muted);flex:none}
+.searchbox input{
+  flex:1;border:none;outline:none;background:transparent;color:var(--ink);font-size:14px;
+}
+.searchbox input::placeholder{color:var(--muted)}
+.icon-btn{
+  width:38px;height:38px;border-radius:9px;
+  display:grid;place-items:center;color:var(--ink-soft);
+  transition:background .15s;
+}
+.icon-btn:hover{background:var(--surface-2)}
+.icon-btn svg{width:19px;height:19px}
+#menuBtn{display:none}
+.icon-btn .ico-moon{display:none}
+[data-theme="dark"] .icon-btn .ico-moon{display:block}
+[data-theme="dark"] .icon-btn .ico-sun{display:none}
+
+/* ============ 三栏骨架 ============ */
+.app{
+  display:grid;
+  grid-template-columns:236px 322px minmax(0,1fr);
+  gap:0;
+  max-width:1480px;
+  margin:0 auto;
+  min-height:calc(100vh - var(--topbar-h));
+}
+/* 侧栏 */
+.sidebar{
+  border-right:1px solid var(--line);
+  background:var(--surface);
+  padding:18px 12px 20px;
+  display:flex;flex-direction:column;gap:6px;
+  height:calc(100vh - var(--topbar-h));
+  position:sticky;top:var(--topbar-h);
+  overflow-y:auto;
+}
+.side-label{
+  font-size:11px;letter-spacing:.14em;color:var(--muted);
+  padding:10px 10px 6px;text-transform:uppercase;
+}
+.cat{
+  display:flex;align-items:center;gap:9px;
+  padding:9px 10px;border-radius:9px;
+  color:var(--ink-soft);font-size:14px;font-weight:500;
+  text-align:left;width:100%;
+  transition:background .12s,color .12s;
+}
+.cat:hover{background:var(--surface-2)}
+.cat.active{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.cat .cat-ico{width:16px;height:16px;flex:none;opacity:.85}
+.cat .cat-count{margin-left:auto;font-size:11.5px;color:var(--muted);font-weight:500}
+.cat.active .cat-count{color:var(--accent)}
+.sidebar-foot{
+  margin-top:auto;padding:12px 10px 4px;
+  border-top:1px solid var(--line);
+  font-size:11.5px;color:var(--muted);line-height:1.6;
+}
+
+/* 列表栏 */
+.listpane{
+  border-right:1px solid var(--line);
+  background:var(--bg);
+  height:calc(100vh - var(--topbar-h));
+  position:sticky;top:var(--topbar-h);
+  display:flex;flex-direction:column;
+}
+.list-head{
+  padding:16px 18px 12px;
+  border-bottom:1px solid var(--line);
+  display:flex;align-items:baseline;gap:10px;
+}
+.list-title{font-family:var(--font-display);font-size:16px;font-weight:700}
+.list-count{font-size:12px;color:var(--muted)}
+.list-scroll{overflow-y:auto;flex:1;padding:10px 8px 20px}
+.note-item{
+  display:block;width:100%;text-align:left;
+  padding:12px 12px;border-radius:10px;
+  border:1px solid transparent;
+  transition:background .12s,border-color .12s;
+  cursor:pointer;
+}
+.note-item:hover{background:var(--surface);border-color:var(--line)}
+.note-item.active{background:var(--surface);border-color:var(--accent);box-shadow:var(--shadow)}
+.ni-title{font-size:14.5px;font-weight:700;color:var(--ink);line-height:1.45;text-wrap:pretty}
+.ni-excerpt{
+  font-size:12.5px;color:var(--muted);margin-top:4px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.ni-meta{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+.ni-date{font-size:11px;color:var(--muted);display:inline-flex;align-items:center;gap:4px}
+.ni-date svg{width:12px;height:12px}
+.ni-tags{display:inline-flex;gap:5px;flex-wrap:wrap}
+.tag{
+  font-size:10.5px;color:var(--accent);background:var(--accent-soft);
+  padding:2px 8px;border-radius:20px;font-weight:500;
+}
+.empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:13.5px;line-height:1.8}
+
+/* 内容栏 */
+.contentpane{
+  height:calc(100vh - var(--topbar-h));
+  position:sticky;top:var(--topbar-h);
+  overflow-y:auto;
+  background:var(--bg);
+}
+.content-wrap{
+  max-width:760px;margin:0 auto;
+  padding:34px 40px 90px;
+}
+.back-btn{
+  display:none;align-items:center;gap:6px;
+  font-size:13px;color:var(--muted);padding:6px 10px;border-radius:8px;margin-bottom:8px;
+}
+.back-btn:hover{background:var(--surface-2);color:var(--ink)}
+.back-btn svg{width:15px;height:15px}
+.note-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.note-meta .cat-chip{
+  font-size:11.5px;font-weight:600;color:var(--accent);background:var(--accent-soft);
+  padding:3px 10px;border-radius:20px;
+}
+.note-meta .date-chip{
+  font-size:11.5px;color:var(--muted);display:inline-flex;align-items:center;gap:5px;
+}
+.note-meta .date-chip svg{width:13px;height:13px}
+.note-title{
+  font-family:var(--font-display);
+  font-size:clamp(22px,3vw,30px);
+  font-weight:700;line-height:1.35;margin:0 0 14px;text-wrap:pretty;
+}
+.note-tags{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:26px}
+.tag-btn{
+  font-size:12px;color:var(--ink-soft);background:var(--surface-2);
+  padding:3px 11px;border-radius:20px;transition:background .12s,color .12s;
+}
+.tag-btn:hover{background:var(--accent-soft);color:var(--accent)}
+.note-body{
+  border-top:1px solid var(--line);
+  padding-top:24px;
+  font-size:15.5px;color:var(--ink-soft);
+  text-wrap:pretty;
+}
+.note-body h2,.note-body h3,.note-body h4{
+  font-family:var(--font-display);color:var(--ink);line-height:1.4;text-wrap:pretty;
+}
+.note-body h2{font-size:20px;margin:28px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.note-body h3{font-size:17px;margin:24px 0 8px}
+.note-body h4{font-size:15.5px;margin:20px 0 6px}
+.note-body p{margin:0 0 14px}
+.note-body ul,.note-body ol{margin:0 0 14px;padding-left:24px}
+.note-body li{margin:4px 0}
+.note-body code{
+  font-family:ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+  font-size:.88em;background:var(--surface-2);color:var(--accent);
+  padding:1.5px 6px;border-radius:5px;
+}
+.note-body pre{
+  background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  padding:14px 16px;overflow-x:auto;margin:0 0 16px;line-height:1.6;
+}
+.note-body pre code{background:transparent;color:var(--ink-soft);padding:0;font-size:13.5px}
+.note-body blockquote{
+  margin:0 0 16px;padding:10px 16px;
+  border-left:3px solid var(--accent);
+  background:var(--accent-soft);border-radius:0 8px 8px 0;
+  color:var(--ink);
+}
+.note-body blockquote p{margin:0}
+.note-body hr{border:none;border-top:1px dashed var(--line);margin:22px 0}
+.note-body .tasks{list-style:none;padding-left:4px}
+.note-body .tasks li{display:flex;align-items:flex-start;gap:8px}
+.note-body .tasks .box{
+  width:15px;height:15px;flex:none;margin-top:4px;
+  border:1.5px solid var(--muted);border-radius:4px;display:inline-block;
+}
+.note-body .tasks li.done{color:var(--muted);text-decoration:line-through}
+.note-body .tasks li.done .box{background:var(--accent);border-color:var(--accent)}
+.note-body a{text-decoration:underline;text-underline-offset:3px}
+.note-edit-hint{
+  margin-top:46px;padding:14px 16px;
+  background:var(--amber-soft);border-radius:10px;
+  font-size:12.5px;color:var(--ink-soft);line-height:1.7;
+}
+.note-edit-hint strong{color:var(--amber);font-weight:700}
+.note-view-empty{
+  height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;color:var(--muted);text-align:center;padding:40px;
+}
+.note-view-empty svg{width:44px;height:44px;opacity:.5}
+.note-view-empty .t1{font-family:var(--font-display);font-size:18px;color:var(--ink-soft)}
+.note-view-empty .t2{font-size:13px;max-width:300px;line-height:1.8}
+
+/* 遮罩 + 抽屉 */
+.scrim{
+  display:none;position:fixed;inset:0;z-index:60;background:rgba(20,18,14,.4);
+}
+body.drawer-open .scrim{display:block}
+
+/* ============ 响应式 ============ */
+@media (max-width:1100px){
+  .app{grid-template-columns:minmax(0,340px) minmax(0,1fr)}
+  .sidebar{
+    position:fixed;top:0;left:0;bottom:0;z-index:70;
+    width:280px;max-width:82vw;
+    transform:translateX(-102%);
+    transition:transform .24s ease;
+    box-shadow:var(--shadow-lift);
+    height:100vh;padding-top:18px;
+  }
+  body.drawer-open .sidebar{transform:translateX(0)}
+  #menuBtn{display:grid}
+}
+@media (max-width:720px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .listpane{border-right:none}
+  .contentpane{display:none}
+  body.reading .listpane{display:none}
+  body.reading .contentpane{display:block}
+  .back-btn{display:inline-flex}
+  .content-wrap{padding:18px 20px 80px}
+  .brand-sub{display:none}
+  .searchbox{max-width:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="icon-btn" id="menuBtn" aria-label="打开分类菜单">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+  </button>
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2" fill="var(--accent)"/><path d="M9 3v18" stroke="var(--accent-ink)" stroke-width="1.4"/><path d="M12 7h4M12 10.5h4M12 14h2.5" stroke="var(--accent-ink)" stroke-width="1.4" stroke-linecap="round"/></svg>
+    <span class="brand-text" id="brandText">我的笔记</span>
+    <span class="brand-sub">个人知识库</span>
+  </div>
+  <div class="searchbox">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+    <input type="text" id="searchInput" placeholder="搜索笔记标题、正文或标签…" autocomplete="off">
+  </div>
+  <button class="icon-btn" id="themeBtn" aria-label="切换深浅色">
+    <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.1 5.1l1.7 1.7M17.2 17.2l1.7 1.7M5.1 18.9l1.7-1.7M17.2 6.8l1.7-1.7"/></svg>
+    <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20.5 14.2A8.3 8.3 0 0 1 9.8 3.5a8.3 8.3 0 1 0 10.7 10.7Z"/></svg>
+  </button>
+</header>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar" aria-label="分类导航">
+    <nav id="catNav"><!-- 分类由 JS 渲染 --></nav>
+    <div class="sidebar-foot">内容由豆包整理维护<br>托管于 GitHub Pages · 全端可读</div>
+  </aside>
+
+  <section class="listpane" id="listpane" aria-label="笔记列表">
+    <div class="list-head">
+      <span class="list-title" id="listTitle">全部笔记</span>
+      <span class="list-count" id="listCount"></span>
+    </div>
+    <div class="list-scroll" id="listScroll"><!-- 列表由 JS 渲染 --></div>
+  </section>
+
+  <main class="contentpane" id="contentpane" aria-label="笔记正文">
+    <div class="content-wrap" id="contentWrap"><!-- 正文由 JS 渲染 --></div>
+  </main>
+</div>
+
+<div class="scrim" id="scrim"></div>
+
+<script>
+/* ================= 站点与笔记数据（以后更新只改这里） ================= */
+var SITE = {
+  title: "我的笔记",
+  subtitle: "个人知识库",
+  categories: [
+    {
+      id: "start",
+      name: "开始使用",
+      icon: "book",
+      notes: [
+        {
+          id: "welcome",
+          title: "欢迎使用你的个人笔记",
+          date: "2026-08-26",
+          tags: ["说明"],
+          content:
+"这是一个**完全属于你**的个人笔记网站，所有内容都由你决定、由豆包帮你打理。\n\n## 它怎么用\n\n- 左侧是**分类**，中间是**笔记列表**，右侧是**正文**，一目了然\n- 顶部搜索框可以全文搜索标题、正文和标签\n- 点击任意标签可快速筛选同类笔记\n- 电脑、平板、手机打开网址都能看，排版自动适配\n\n## 排版效果示例\n\n> 引用块用来放重点提示，会以绿色竖线标出。\n\n1. 有序列表适合步骤说明\n2. 每条笔记还支持**加粗**、`行内代码`、待办清单等功能\n\n- [x] 已完成的事项会显示为勾选状态\n- [ ] 未完成的事项可以继续跟踪\n\n```\n代码块支持等宽字体排版，适合贴代码片段\n```\n\n## 想改排版？\n\n直接告诉豆包，比如“字号再大一点”“改成深色主题”“把列表改成卡片式”，我会帮你调整后自动更新上线。"
+        },
+        {
+          id: "how-to-update",
+          title: "如何更新与调整排版",
+          date: "2026-08-26",
+          tags: ["说明", "更新"],
+          content:
+"这个网站的维护流程非常简单，你**完全不需要写代码**。\n\n## 更新笔记\n\n把整理好的笔记直接发给我（粘贴文字或发文件都可以），我会：\n\n1. 按你的内容新建分类或补充到已有分类\n2. 排版成适合阅读的格式（标题、列表、代码块等）\n3. 自动推送到 GitHub，一般 **1 分钟内**网址就能看到最新内容\n\n## 调整排版与样式\n\n随时提出，例如：\n\n- “标题再大一点 / 行距调宽一些”\n- “新增一个 XX 分类”\n- “把某篇笔记移到别的分类”\n- “换一种主题色”\n\n## 多端随时看\n\n手机、平板、电脑输入同一个网址即可打开，无需安装任何 App。\n\n## 注意事项\n\n- 更新内容发布到公开网址后，**任何人拿到链接都能看到**，请不要放身份证号、密码等敏感信息\n- 如果想要私有访问，可以联系我把仓库改为私有仓库（链接仍可访问，但需要登录 GitHub 账号）"
+        }
+      ]
+    },
+    {
+      id: "demo-work",
+      name: "示例 · 工作",
+      icon: "briefcase",
+      notes: [
+        {
+          id: "demo-meeting",
+          title: "周会要点速记（示例）",
+          date: "2026-08-20",
+          tags: ["示例", "会议"],
+          content:
+"这是一篇**示例笔记**，用于演示排版效果，随时可以删除或替换成你自己的内容。\n\n## 本周重点\n\n- 项目 A 进入联调阶段，下周三前完成\n- 客户反馈 B 问题已定位，正在修复\n- 下周排期需与测试对齐\n\n> 提示：标记为“示例”的笔记都只是为了展示效果，可以让我直接删掉。"
+        }
+      ]
+    },
+    {
+      id: "demo-life",
+      name: "示例 · 生活",
+      icon: "home",
+      notes: [
+        {
+          id: "demo-reading",
+          title: "读书清单（示例）",
+          date: "2026-08-18",
+          tags: ["示例", "读书"],
+          content:
+"这里可以放你的阅读计划、购物清单、旅行安排等生活笔记。\n\n## 在读\n\n- [x] 《深度工作》——已读完，重点章节做了摘录\n- [ ] 《掌控习惯》——读到第 6 章\n- [ ] 《纳瓦尔宝典》——下周开始\n\n## 想做的事\n\n1. 周末去苏州河边骑车\n2. 整理照片归档\n3. 尝试新的咖啡店"
+        }
+      ]
+    }
+  ]
+};
+
+/* ================= 图标 ================= */
+var ICONS = {
+  book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>',
+  briefcase: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18"/></svg>',
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1V10Z"/></svg>',
+  folder: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>',
+  calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
+  arrowLeft: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>',
+  openBook: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10.5 5 8.4 4.3 6 4.3c-1.2 0-2.4.2-3 .5v14c.6-.3 1.8-.5 3-.5 2.4 0 4.5.7 6 2.2 1.5-1.5 3.6-2.2 6-2.2 1.2 0 2.4.2 3 .5v-14c-.6-.3-1.8-.5-3-.5-2.4 0-4.5.7-6 2.2ZM12 6.5v14"/></svg>'
+};
+
+/* ================= 工具函数 ================= */
+function escapeHtml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function inline(s){
+  s = escapeHtml(s);
+  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+  s = s.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  return s;
+}
+function parseMarkdown(text){
+  var lines = text.replace(/\r\n/g,'\n').split('\n');
+  var html = '', i = 0, inCode = false, codeBuf = [];
+  while (i < lines.length){
+    var line = lines[i];
+    if (/^\s*```/.test(line)){
+      if (inCode){ html += '<pre><code>' + codeBuf.join('\n') + '</code></pre>'; codeBuf = []; inCode = false; }
+      else { inCode = true; }
+      i++; continue;
+    }
+    if (inCode){ codeBuf.push(escapeHtml(line)); i++; continue; }
+    var m = line.match(/^(#{1,4})\s+(.*)$/);
+    if (m){ var lv = m[1].length + 1; html += '<h'+lv+'>' + inline(m[2]) + '</h'+lv+'>'; i++; continue; }
+    if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)){ html += '<hr>'; i++; continue; }
+    if (/^\s*>\s?/.test(line)){
+      var q = [];
+      while (i < lines.length && /^\s*>\s?/.test(lines[i])){ q.push(lines[i].replace(/^\s*>\s?/,'')); i++; }
+      html += '<blockquote>' + parseMarkdown(q.join('\n')) + '</blockquote>'; continue;
+    }
+    if (/^\s*[-*]\s+\[( |x|X)\]\s+/.test(line)){
+      var tasks = [];
+      while (i < lines.length && /^\s*[-*]\s+\[( |x|X)\]\s+/.test(lines[i])){
+        var tm = lines[i].match(/^\s*[-*]\s+\[( |x|X)\]\s+(.*)$/);
+        tasks.push('<li class="' + (tm[1].toLowerCase() === 'x' ? 'done' : '') + '"><span class="box"></span>' + inline(tm[2]) + '</li>');
+        i++;
+      }
+      html += '<ul class="tasks">' + tasks.join('') + '</ul>'; continue;
+    }
+    if (/^\s*[-*]\s+/.test(line)){
+      var items = [];
+      while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])){ items.push('<li>' + inline(lines[i].replace(/^\s*[-*]\s+/,'')) + '</li>'); i++; }
+      html += '<ul>' + items.join('') + '</ul>'; continue;
+    }
+    if (/^\s*\d+[.)]\s+/.test(line)){
+      var oitems = [];
+      while (i < lines.length && /^\s*\d+[.)]\s+/.test(lines[i])){ oitems.push('<li>' + inline(lines[i].replace(/^\s*\d+[.)]\s+/,'')) + '</li>'); i++; }
+      html += '<ol>' + oitems.join('') + '</ol>'; continue;
+    }
+    if (/^\s*$/.test(line)){ i++; continue; }
+    var para = [];
+    while (i < lines.length && !/^\s*$/.test(lines[i])){ para.push(lines[i]); i++; }
+    html += '<p>' + inline(para.join('\n').replace(/\n/g,'<br>')) + '</p>';
+  }
+  return html;
+}
+function stripMd(s){ return s.replace(/`/g,'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/\[|\]|\(|\)/g,'').replace(/^\s*[-*>#\d.)]+/gm,'').replace(/\s+/g,' ').trim(); }
+function excerpt(s, n){
+  var t = stripMd(s);
+  return t.length > n ? t.slice(0, n) + '…' : t;
+}
+function todayLabel(){
+  var d = new Date();
+  var y = d.getFullYear(), mo = String(d.getMonth()+1).padStart(2,'0'), da = String(d.getDate()).padStart(2,'0');
+  return y + '-' + mo + '-' + da;
+}
+
+/* ================= 状态 ================= */
+var state = {
+  cat: 'all',
+  note: null,
+  query: '',
+  tag: null
+};
+
+function allNotes(){
+  var list = [];
+  SITE.categories.forEach(function(c){ c.notes.forEach(function(n){ list.push({note:n, cat:c}); }); });
+  return list;
+}
+function findCat(id){ for (var i=0;i<SITE.categories.length;i++){ if (SITE.categories[i].id===id) return SITE.categories[i]; } return null; }
+function findNote(id){
+  for (var i=0;i<SITE.categories.length;i++){
+    for (var j=0;j<SITE.categories[i].notes.length;j++){
+      if (SITE.categories[i].notes[j].id===id) return { note:SITE.categories[i].notes[j], cat:SITE.categories[i] };
+    }
+  }
+  return null;
+}
+
+/* ================= 渲染：侧栏 ================= */
+function renderSidebar(){
+  var nav = document.getElementById('catNav');
+  var html = '';
+  html += '<div class="side-label">分类</div>';
+  html += catButton('all', 'folder', '全部笔记', allNotes().length);
+  SITE.categories.forEach(function(c){ html += catButton(c.id, c.icon, c.name, c.notes.length); });
+  nav.innerHTML = html;
+}
+function catButton(id, icon, name, count){
+  var active = state.cat === id ? ' active' : '';
+  return '<button class="cat' + active + '" data-cat="' + id + '">' +
+    '<span class="cat-ico">' + (ICONS[icon] || ICONS.folder) + '</span>' +
+    '<span class="cat-name">' + escapeHtml(name) + '</span>' +
+    '<span class="cat-count">' + count + '</span></button>';
+}
+
+/* ================= 渲染：列表 ================= */
+function visibleNotes(){
+  var list = allNotes();
+  if (state.cat !== 'all') list = list.filter(function(x){ return x.cat.id === state.cat; });
+  if (state.tag) list = list.filter(function(x){ return x.note.tags.indexOf(state.tag) !== -1; });
+  if (state.query){
+    var q = state.query.toLowerCase();
+    list = list.filter(function(x){
+      return (x.note.title + ' ' + x.note.content + ' ' + x.note.tags.join(' ')).toLowerCase().indexOf(q) !== -1;
+    });
+  }
+  return list;
+}
+function renderList(){
+  var scroll = document.getElementById('listScroll');
+  var list = visibleNotes();
+  var title, count;
+  if (state.query){ title = '搜索结果'; count = list.length + ' 篇'; }
+  else if (state.tag){ title = '标签 · ' + state.tag; count = list.length + ' 篇'; }
+  else if (state.cat === 'all'){ title = '全部笔记'; count = list.length + ' 篇'; }
+  else { var c = findCat(state.cat); title = c ? c.name : '全部笔记'; count = list.length + ' 篇'; }
+  document.getElementById('listTitle').textContent = title;
+  document.getElementById('listCount').textContent = count;
+
+  if (list.length === 0){
+    scroll.innerHTML = '<div class="empty">没有找到相关笔记<br>换个关键词试试，或把新笔记发给我</div>';
+    return;
+  }
+  var html = '';
+  list.forEach(function(x){
+    html += '<button class="note-item' + (state.note === x.note.id ? ' active' : '') + '" data-id="' + x.note.id + '">' +
+      '<div class="ni-title">' + escapeHtml(x.note.title) + '</div>' +
+      '<div class="ni-excerpt">' + escapeHtml(excerpt(x.note.content, 64)) + '</div>' +
+      '<div class="ni-meta">' +
+        '<span class="ni-date">' + ICONS.calendar + escapeHtml(x.note.date) + '</span>' +
+        '<span class="ni-tags">' + x.note.tags.slice(0,3).map(function(t){ return '<span class="tag">' + escapeHtml(t) + '</span>'; }).join('') + '</span>' +
+      '</div></button>';
+  });
+  scroll.innerHTML = html;
+}
+
+/* ================= 渲染：正文 ================= */
+function renderNote(){
+  var wrap = document.getElementById('contentWrap');
+  if (!state.note){
+    wrap.innerHTML =
+      '<div class="note-view-empty">' + ICONS.openBook +
+      '<div class="t1">选择一篇笔记开始阅读</div>' +
+      '<div class="t2">左侧选择分类，中间点击任意笔记即可查看正文。</div></div>';
+    return;
+  }
+  var found = findNote(state.note);
+  if (!found){ wrap.innerHTML = '<div class="note-view-empty"><div class="t1">笔记不存在</div></div>'; return; }
+  var n = found.note, c = found.cat;
+  var tags = n.tags.map(function(t){
+    return '<button class="tag-btn" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</button>';
+  }).join('');
+  wrap.innerHTML =
+    '<button class="back-btn" id="backBtn">' + ICONS.arrowLeft + '返回列表</button>' +
+    '<div class="note-meta">' +
+      '<span class="cat-chip">' + escapeHtml(c.name) + '</span>' +
+      '<span class="date-chip">' + ICONS.calendar + escapeHtml(n.date) + '</span>' +
+    '</div>' +
+    '<h1 class="note-title">' + escapeHtml(n.title) + '</h1>' +
+    '<div class="note-tags">' + tags + '</div>' +
+    '<div class="note-body">' + parseMarkdown(n.content) + '</div>' +
+    '<div class="note-edit-hint"><strong>想更新这篇笔记？</strong> 把新内容直接发给我，我会帮你整理并同步上线。</div>';
+  var back = document.getElementById('backBtn');
+  if (back) back.addEventListener('click', function(){ closeReading(); });
+}
+
+/* ================= 路由与交互 ================= */
+function updateHash(){
+  var h = '#/all';
+  if (state.cat && state.cat !== 'all') h = '#/cat/' + state.cat;
+  if (state.note) h = '#/note/' + state.note;
+  if (location.hash !== h) history.replaceState(null, '', h);
+}
+function openNote(id){
+  state.note = id;
+  var f = findNote(id);
+  if (f) state.cat = f.cat.id;
+  renderSidebar(); renderList(); renderNote(); updateHash();
+  document.body.classList.add('reading');
+  document.getElementById('contentpane').scrollTop = 0;
+  var w = window.innerWidth;
+  if (w > 1100){ /* 桌面端不做切换 */ }
+  else { document.body.classList.remove('drawer-open'); }
+}
+function openCategory(id){
+  state.cat = id; state.note = null; state.query = ''; state.tag = null;
+  document.getElementById('searchInput').value = '';
+  renderSidebar(); renderList(); renderNote(); updateHash();
+  document.body.classList.remove('drawer-open');
+}
+function closeReading(){
+  document.body.classList.remove('reading');
+}
+function handleHash(){
+  var h = location.hash || '';
+  var m;
+  if ((m = h.match(/^#\/note\/([^/]+)$/))){
+    var f = findNote(m[1]);
+    if (f){
+      state.note = m[1]; state.cat = f.cat.id;
+      renderSidebar(); renderList(); renderNote();
+      document.getElementById('contentpane').scrollTop = 0;
+    }
+  } else if ((m = h.match(/^#\/cat\/([^/]+)$/))){
+    openCategory(m[1]);
+  } else {
+    state.cat = 'all'; state.note = null;
+    renderSidebar(); renderList(); renderNote();
+  }
+}
+
+/* ================= 事件绑定 ================= */
+function bind(){
+  var search = document.getElementById('searchInput');
+  var timer = null;
+  search.addEventListener('input', function(){
+    clearTimeout(timer);
+    timer = setTimeout(function(){
+      state.query = search.value.trim();
+      if (state.query){ state.note = null; document.body.classList.remove('reading'); }
+      renderList(); renderNote(); updateHash();
+    }, 180);
+  });
+
+  document.getElementById('catNav').addEventListener('click', function(e){
+    var b = e.target.closest('.cat');
+    if (b) openCategory(b.getAttribute('data-cat'));
+  });
+
+  document.getElementById('listScroll').addEventListener('click', function(e){
+    var b = e.target.closest('.note-item');
+    if (b) openNote(b.getAttribute('data-id'));
+  });
+
+  document.getElementById('contentWrap').addEventListener('click', function(e){
+    var t = e.target.closest('.tag-btn');
+    if (t){
+      state.tag = t.getAttribute('data-tag');
+      state.note = null; state.query = '';
+      document.getElementById('searchInput').value = '';
+      document.body.classList.remove('reading');
+      renderSidebar(); renderList(); renderNote(); updateHash();
+    }
+  });
+
+  document.getElementById('themeBtn').addEventListener('click', function(){
+    var root = document.documentElement;
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('notes-theme', next); } catch(e){}
+  });
+
+  document.getElementById('menuBtn').addEventListener('click', function(){
+    document.body.classList.toggle('drawer-open');
+  });
+  document.getElementById('scrim').addEventListener('click', function(){
+    document.body.classList.remove('drawer-open');
+  });
+
+  window.addEventListener('hashchange', handleHash);
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === '/' && document.activeElement !== search){
+      e.preventDefault(); search.focus();
+    }
+    if (e.key === 'Escape'){
+      document.body.classList.remove('drawer-open');
+      if (window.innerWidth <= 720 && document.body.classList.contains('reading')) closeReading();
+    }
+  });
+}
+
+/* ================= 启动 ================= */
+(function init(){
+  document.getElementById('brandText').textContent = SITE.title;
+  document.title = SITE.title + ' · ' + SITE.subtitle;
+  try {
+    var saved = localStorage.getItem('notes-theme');
+    if (saved) document.documentElement.setAttribute('data-theme', saved);
+  } catch(e){}
+  renderSidebar();
+  handleHash();
+  bind();
+})();
+</script>
+</body>
+</html>
