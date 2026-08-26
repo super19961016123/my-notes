@@ -1249,26 +1249,7 @@ function applyFontSize(size){
 function insertTaskItem(){
   var ed = document.getElementById('edContent');
   ed.focus();
-  var sel = window.getSelection();
-  if (!sel.rangeCount) return;
-  var range = sel.getRangeAt(0);
-  range.deleteContents();
-
-  var item = document.createElement('div');
-  item.className = 'task-item';
-  var box = document.createElement('span');
-  box.className = 'box';
-  item.appendChild(box);
-  item.appendChild(document.createTextNode('待办事项'));
-
-  range.insertNode(item);
-
-  var textNode = item.lastChild;
-  var r = document.createRange();
-  r.setStart(textNode, 0);
-  r.setEnd(textNode, 4);
-  sel.removeAllRanges();
-  sel.addRange(r);
+  document.execCommand('insertHTML', false, '<div class="task-item"><span class="box"></span>&nbsp;</div>');
 }
 /* ================= 编辑弹窗 ================= */
 function openEditor(mode, noteId){
