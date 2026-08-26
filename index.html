@@ -1173,6 +1173,7 @@ function saveNoteBody(noteId){
     f.note.content = body.innerHTML;
     f.note.format = 'html';
     persist();
+    renderList();
     maybePush();
   }
 }
