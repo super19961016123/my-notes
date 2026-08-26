@@ -898,8 +898,19 @@ function stripMd(s){ return s.replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').repl
 function hasUnfinishedTasks(note){
   if (!note || !note.content) return false;
   if (note.format === 'html'){
-    var items = note.content.match(/<div[^>]*class\s*=\s*"?task-item[^">]*"?[^>]*>/gi) || [];
-    return items.some(function(it){ return !/done/i.test(it); });
+    try {
+      var div = document.createElement('div');
+      div.innerHTML = note.content;
+      var items = div.querySelectorAll('.task-item');
+      for (var i = 0; i < items.length; i++){
+        if (!items[i].classList.contains('done')) return true;
+      }
+      return false;
+    } catch(e){
+      var items = note.content.match(/class\s*=\s*"?task-item[^">]*"?/gi) || [];
+      var done = note.content.match(/task-item[^">]*done/gi) || [];
+      return items.length > 0 && done.length < items.length;
+    }
   }
   return /^\s*[-*]\s*\[\s\]\s*/m.test(note.content);
 }
