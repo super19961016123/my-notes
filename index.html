@@ -729,18 +729,18 @@ function parseMarkdown(text){
       while (i < lines.length && /^\s*>\s?/.test(lines[i])){ q.push(lines[i].replace(/^\s*>\s?/,'')); i++; }
       html += '<blockquote>' + parseMarkdown(q.join('\n')) + '</blockquote>'; continue;
     }
-    if (/^\s*[-*]\s+\[( |x|X)\]\s+/.test(line)){
+    if (/^\s*[-*]\s*\[( |x|X)\]\s*/.test(line)){
       var tasks = [];
-      while (i < lines.length && /^\s*[-*]\s+\[( |x|X)\]\s+/.test(lines[i])){
-        var tm = lines[i].match(/^\s*[-*]\s+\[( |x|X)\]\s+(.*)$/);
+      while (i < lines.length && /^\s*[-*]\s*\[( |x|X)\]\s*/.test(lines[i])){
+        var tm = lines[i].match(/^\s*[-*]\s*\[( |x|X)\]\s*(.*)$/);
         tasks.push('<li class="' + (tm[1].toLowerCase() === 'x' ? 'done' : '') + '"><span class="box"></span>' + inline(tm[2]) + '</li>');
         i++;
       }
       html += '<ul class="tasks">' + tasks.join('') + '</ul>'; continue;
     }
-    if (/^\s*[-*]\s+/.test(line)){
+    if (/^\s*[-*]\s*/.test(line)){
       var items = [];
-      while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])){ items.push('<li>' + inline(lines[i].replace(/^\s*[-*]\s+/,'')) + '</li>'); i++; }
+      while (i < lines.length && /^\s*[-*]\s*/.test(lines[i])){ items.push('<li>' + inline(lines[i].replace(/^\s*[-*]\s*/,'')) + '</li>'); i++; }
       html += '<ul>' + items.join('') + '</ul>'; continue;
     }
     if (/^\s*\d+[.)]\s+/.test(line)){
@@ -751,7 +751,7 @@ function parseMarkdown(text){
     if (/^\s*$/.test(line)){ i++; continue; }
     var para = [];
     while (i < lines.length && !/^\s*$/.test(lines[i])){ para.push(lines[i]); i++; }
-    html += '<p>' + inline(para.join('\n').replace(/\n/g,'<br>')) + '</p>';
+    html += '<p>' + inline(para.join('\n')).replace(/\n/g,'<br>') + '</p>';
   }
   return html;
 }
