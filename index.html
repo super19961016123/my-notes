@@ -298,6 +298,8 @@ a:hover{text-decoration:underline}
 .note-item:hover{background:var(--surface);border-color:var(--line)}
 .note-item.active{background:var(--surface);border-color:var(--accent);box-shadow:var(--shadow)}
 .ni-title{font-size:14.5px;font-weight:700;color:var(--ink);line-height:1.45;text-wrap:pretty}
+.ni-title.has-tasks{color:#d32f2f}
+.note-title.has-tasks{color:#d32f2f}
 .ni-excerpt{
   font-size:12.5px;color:var(--muted);margin-top:4px;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
@@ -892,7 +894,15 @@ function parseMarkdown(text){
   }
   return html;
 }
-function stripMd(s){ return s.replace(/\{c:[^}]+\}|\{\/c\}|\{s:\d+\}|\{\/s\}/g,'').replace(/`/g,'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/\[|\]|\(|\)/g,'').replace(/^\s*[-*>#\d.)]+/gm,'').replace(/\s+/g,' ').trim(); }
+function stripMd(s){ return s.replace(/<[^>]+>/g,'').replace(/\{c:[^}]+\}|\{\/c\}|\{s:\d+\}|\{\/s\}/g,'').replace(/`/g,'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/\[|\]|\(|\)/g,'').replace(/^\s*[-*>#\d.)]+/gm,'').replace(/\s+/g,' ').trim(); }
+function hasUnfinishedTasks(note){
+  if (!note || !note.content) return false;
+  if (note.format === 'html'){
+    var items = note.content.match(/<div class="task-item[^"]*">/g) || [];
+    return items.some(function(it){ return it.indexOf('done') === -1; });
+  }
+  return /^\s*[-*]\s*\[\s\]\s*/m.test(note.content);
+}
 function excerpt(s, n){
   var t = stripMd(s);
   return t.length > n ? t.slice(0, n) + '…' : t;
@@ -1034,7 +1044,7 @@ function renderList(){
   var html = '';
   list.forEach(function(x){
     html += '<button class="note-item' + (state.note === x.note.id ? ' active' : '') + '" data-id="' + x.note.id + '" draggable="true">' +
-      '<div class="ni-title">' + escapeHtml(x.note.title) + '</div>' +
+      '<div class="ni-title' + (hasUnfinishedTasks(x.note) ? ' has-tasks' : '') + '">' + escapeHtml(x.note.title) + '</div>' +
       '<div class="ni-excerpt">' + escapeHtml(excerpt(x.note.content, 64)) + '</div>' +
       '<div class="ni-meta">' +
         '<span class="ni-date">' + ICONS.calendar + escapeHtml(x.note.date) + '</span>' +
@@ -1128,7 +1138,7 @@ function renderNote(){
       '<button class="move-btn" id="moveUpBtn" title="上移一篇">↑</button>' +
       '<button class="move-btn" id="moveDownBtn" title="下移一篇">↓</button>' +
     '</div>' +
-    '<h1 class="note-title">' + escapeHtml(n.title) + '</h1>' +
+    '<h1 class="note-title' + (hasUnfinishedTasks(n) ? ' has-tasks' : '') + '">' + escapeHtml(n.title) + '</h1>' +
     '<div class="note-tags">' + tags + '</div>' +
     '<div class="note-body">' + (n.format === 'html' ? n.content : parseMarkdown(n.content)) + '</div>' +
     '<div class="note-edit-hint"><strong>这篇笔记存在当前设备浏览器里。</strong> 想改内容点右上角“编辑”；想让它出现在其他设备，用“导出备份”带走，或把内容发给我同步到云端。</div>';
