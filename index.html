@@ -170,6 +170,30 @@ a:hover{text-decoration:underline}
 .cat .cat-ico{width:16px;height:16px;flex:none;opacity:.85}
 .cat .cat-count{margin-left:auto;font-size:11.5px;color:var(--muted);font-weight:500}
 .cat.active .cat-count{color:var(--accent)}
+/* 分类树 */
+.cat-row{display:flex;align-items:center;gap:6px;flex:1;min-width:0}
+.cat-toggle{width:16px;height:16px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer;border-radius:4px;transition:transform .15s}
+.cat-toggle:hover{background:var(--surface-2)}
+.cat-toggle.collapsed{transform:rotate(-90deg)}
+.cat-toggle.empty{visibility:hidden}
+.cat-actions{margin-left:auto;display:none;gap:1px;flex:none}
+.cat:hover .cat-actions{display:flex}
+.cat-act{width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:5px;color:var(--muted);cursor:pointer;flex:none;font-size:13px}
+.cat-act:hover{background:var(--surface);color:var(--ink)}
+.cat-act.del:hover{color:var(--danger);background:var(--danger-soft)}
+.cat .cat-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+/* 编辑器工具栏 */
+.ed-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:7px 9px;border:1px solid var(--line);border-bottom:none;border-radius:9px 9px 0 0;background:var(--surface-2)}
+.ed-toolbar .tb-sep{width:1px;height:18px;background:var(--line);margin:0 3px;flex:none}
+.ed-toolbar button{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:26px;padding:0 6px;border-radius:6px;background:transparent;border:1px solid transparent;color:var(--ink-soft);cursor:pointer;font-size:13px;font-weight:600}
+.ed-toolbar button:hover{background:var(--surface);border-color:var(--line)}
+.ed-toolbar select{height:26px;padding:0 5px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:12px}
+.ed-toolbar input[type=color]{width:26px;height:26px;padding:0;border:1px solid var(--line);border-radius:6px;background:transparent;cursor:pointer;flex:none}
+#edContent{border-radius:0 0 9px 9px;border-top:none;min-height:200px}
+.icon-picker{display:flex;flex-wrap:wrap;gap:6px}
+.icon-picker button{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);cursor:pointer}
+.icon-picker button.sel{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.icon-picker svg{width:18px;height:18px}
 .sidebar-tools{
   margin-top:8px;padding:10px 6px 2px;
   border-top:1px solid var(--line);
@@ -538,6 +562,28 @@ body.drawer-open .scrim{display:block}
       </div>
       <div class="field">
         <label for="edContent">内容（支持简易排版）</label>
+        <div class="ed-toolbar">
+          <button type="button" data-md="bold" title="加粗"><b>B</b></button>
+          <button type="button" data-md="italic" title="斜体"><i>I</i></button>
+          <span class="tb-sep"></span>
+          <button type="button" data-md="h2" title="小标题">H2</button>
+          <button type="button" data-md="list" title="列表">• 列表</button>
+          <button type="button" data-md="quote" title="引用">”</button>
+          <span class="tb-sep"></span>
+          <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)">字号
+            <select id="edFontSize">
+              <option value="">默认</option>
+              <option value="13">小</option>
+              <option value="16">中</option>
+              <option value="19">大</option>
+              <option value="24">特大</option>
+            </select>
+          </label>
+          <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)">颜色
+            <input type="color" id="edFontColor" value="#1a1a1a">
+          </label>
+          <button type="button" id="edClearFmt" title="清除选中文字的颜色和字号">清除格式</button>
+        </div>
         <textarea id="edContent" placeholder="开始写…&#10;&#10;支持：## 小标题、- 列表、**加粗**、`代码`、> 引用、- [ ] 待办"></textarea>
       </div>
       <div class="ed-hint">排版小技巧：<code>## 小标题</code>　<code>- 列表项</code>　<code>**加粗**</code>　<code>`代码`</code>　<code>&gt; 引用</code>　<code>- [ ] 待办</code></div>
@@ -554,6 +600,31 @@ body.drawer-open .scrim{display:block}
   </div>
 </div>
 
+<!-- ===== 新建分类弹窗 ===== -->
+<div class="modal-mask" id="catMask" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-label="新建分类" style="max-width:420px">
+    <div class="modal-head">新建分类</div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="newCatName">分类名称</label>
+        <input type="text" id="newCatName" placeholder="例如：工作、学习、生活">
+      </div>
+      <div class="field">
+        <label for="newCatParent">父分类（可选，留空为顶级分类）</label>
+        <select id="newCatParent"></select>
+      </div>
+      <div class="field">
+        <label>图标</label>
+        <div class="icon-picker" id="iconPicker"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span class="spacer"></span>
+      <button class="ghost-btn" id="newCatCancel">取消</button>
+      <button class="primary-btn" id="newCatSave">创建</button>
+    </div>
+  </div>
+</div>
 <!-- ===== 云同步设置 ===== -->
 <div class="modal-mask" id="syncMask" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-label="云同步设置" style="max-width:520px">
@@ -607,6 +678,8 @@ var DEFAULT_DATA = {
       id: "start",
       name: "开始使用",
       icon: "book",
+      parent: null,
+      collapsed: false,
       notes: [
         {
           id: "welcome",
@@ -628,29 +701,33 @@ var DEFAULT_DATA = {
     },
     {
       id: "demo-work",
-      name: "示例 · 工作",
+      name: "工作",
       icon: "briefcase",
+      parent: null,
+      collapsed: false,
       notes: [
         {
           id: "demo-meeting",
-          title: "周会要点速记（示例）",
+          title: "周会要点速记",
           date: "2026-08-20",
-          tags: ["示例", "会议"],
+          tags: ["会议"],
           content:
-"这是一篇**示例笔记**，用于演示排版效果，随时可以删除或替换成你自己的内容。\n\n## 本周重点\n\n- 项目 A 进入联调阶段，下周三前完成\n- 客户反馈 B 问题已定位，正在修复\n- 下周排期需与测试对齐\n\n> 提示：标记为“示例”的笔记都只是为了展示效果，可以点“编辑”删掉或改掉。"
+"这是一篇演示笔记，用于展示排版效果，随时可以删除或替换成你自己的内容。\n\n## 本周重点\n\n- 项目 A 进入联调阶段，下周三前完成\n- 客户反馈 B 问题已定位，正在修复\n- 下周排期需与测试对齐\n\n> 提示：这些笔记只是为了展示效果，可以点“编辑”删掉或改掉。"
         }
       ]
     },
     {
       id: "demo-life",
-      name: "示例 · 生活",
+      name: "生活",
       icon: "home",
+      parent: null,
+      collapsed: false,
       notes: [
         {
           id: "demo-reading",
-          title: "读书清单（示例）",
+          title: "读书清单",
           date: "2026-08-18",
-          tags: ["示例", "读书"],
+          tags: ["读书"],
           content:
 "这里可以放你的阅读计划、购物清单、旅行安排等生活笔记。\n\n## 在读\n\n- [x] 《深度工作》——已读完，重点章节做了摘录\n- [ ] 《掌控习惯》——读到第 6 章\n- [ ] 《纳瓦尔宝典》——下周开始\n\n## 想做的事\n\n1. 周末去苏州河边骑车\n2. 整理照片归档\n3. 尝试新的咖啡店"
         }
@@ -684,9 +761,19 @@ function loadUserData(){
   return null;
 }
 function cloneData(d){ return JSON.parse(JSON.stringify(d)); }
+function normalizeData(d){
+  if (!d || !Array.isArray(d.categories)) return d;
+  d.categories.forEach(function(c){
+    if (c.parent === undefined) c.parent = null;
+    if (c.collapsed === undefined) c.collapsed = false;
+    if (!c.icon) c.icon = 'folder';
+    if (!Array.isArray(c.notes)) c.notes = [];
+  });
+  return d;
+}
 
 var userData = loadUserData();
-var current = userData ? userData : cloneData(DEFAULT_DATA);
+var current = normalizeData(userData ? userData : cloneData(DEFAULT_DATA));
 
 function persist(){
   try {
@@ -704,6 +791,8 @@ function escapeHtml(s){
 }
 function inline(s){
   s = escapeHtml(s);
+  s = s.replace(/\{c:(#[0-9a-fA-F]{3,6}|[a-zA-Z]+)\}([\s\S]*?)\{\/c\}/g, '<span style="color:$1">$2</span>');
+  s = s.replace(/\{s:(\d+)\}([\s\S]*?)\{\/s\}/g, '<span style="font-size:$1px;line-height:1.6">$2</span>');
   s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
   s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
@@ -755,7 +844,7 @@ function parseMarkdown(text){
   }
   return html;
 }
-function stripMd(s){ return s.replace(/`/g,'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/\[|\]|\(|\)/g,'').replace(/^\s*[-*>#\d.)]+/gm,'').replace(/\s+/g,' ').trim(); }
+function stripMd(s){ return s.replace(/\{c:[^}]+\}|\{\/c\}|\{s:\d+\}|\{\/s\}/g,'').replace(/`/g,'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/\[|\]|\(|\)/g,'').replace(/^\s*[-*>#\d.)]+/gm,'').replace(/\s+/g,' ').trim(); }
 function excerpt(s, n){
   var t = stripMd(s);
   return t.length > n ? t.slice(0, n) + '…' : t;
@@ -800,27 +889,71 @@ function findNote(id){
   return null;
 }
 
+/* ================= 分类树辅助 ================= */
+function childrenOf(id){
+  return current.categories.filter(function(c){ return c.parent === id; });
+}
+function descendantIds(id){
+  var ids = [id], stack = [id];
+  while (stack.length){
+    var cur = stack.pop();
+    childrenOf(cur).forEach(function(c){ ids.push(c.id); stack.push(c.id); });
+  }
+  return ids;
+}
+function catDepth(id){
+  var d = 0, c = findCat(id);
+  while (c && c.parent){ d++; c = findCat(c.parent); }
+  return d;
+}
+function catNoteCount(id){
+  var ids = descendantIds(id), n = 0;
+  current.categories.forEach(function(c){ if (ids.indexOf(c.id) !== -1) n += c.notes.length; });
+  return n;
+}
 /* ================= 渲染：侧栏 ================= */
 function renderSidebar(){
   var nav = document.getElementById('catNav');
   var html = '';
   html += '<div class="side-label">分类</div>';
-  html += catButton('all', 'folder', '全部笔记', allNotes().length);
-  current.categories.forEach(function(c){ html += catButton(c.id, c.icon, c.name, c.notes.length); });
+  html += catButton('all', 'folder', '全部笔记', allNotes().length, 0, false, false);
+  childrenOf(null).forEach(function(c){ html += renderCatNode(c); });
   nav.innerHTML = html;
 }
-function catButton(id, icon, name, count){
+function renderCatNode(c){
+  var kids = childrenOf(c.id);
+  var html = catButton(c.id, c.icon, c.name, catNoteCount(c.id), catDepth(c.id), kids.length > 0, c.collapsed);
+  if (kids.length > 0 && !c.collapsed){
+    kids.forEach(function(k){ html += renderCatNode(k); });
+  }
+  return html;
+}
+function catButton(id, icon, name, count, depth, hasKids, collapsed){
   var active = state.cat === id ? ' active' : '';
-  return '<button class="cat' + active + '" data-cat="' + id + '">' +
-    '<span class="cat-ico">' + (ICONS[icon] || ICONS.folder) + '</span>' +
-    '<span class="cat-name">' + escapeHtml(name) + '</span>' +
+  var pad = 10 + (depth || 0) * 14;
+  var toggle = hasKids
+    ? '<span class="cat-toggle' + (collapsed ? ' collapsed' : '') + '" data-toggle="' + id + '"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>'
+    : '<span class="cat-toggle empty"></span>';
+  var acts = id === 'all' ? '' :
+    '<span class="cat-actions">' +
+      '<span class="cat-act" data-rename="' + id + '" title="重命名"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>' +
+      '<span class="cat-act del" data-delcat="' + id + '" title="删除"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></span>' +
+    '</span>';
+  return '<button class="cat' + active + '" data-cat="' + id + '" style="padding-left:' + pad + 'px">' +
+    '<span class="cat-row">' + toggle +
+      '<span class="cat-ico">' + (ICONS[icon] || ICONS.folder) + '</span>' +
+      '<span class="cat-name">' + escapeHtml(name) + '</span>' + acts +
+    '</span>' +
     '<span class="cat-count">' + count + '</span></button>';
 }
 
 /* ================= 渲染：列表 ================= */
 function visibleNotes(){
   var list = allNotes();
-  if (state.cat !== 'all') list = list.filter(function(x){ return x.cat.id === state.cat; });
+  if (state.cat !== 'all'){
+    var ids = descendantIds(state.cat);
+    list = list.filter(function(x){ return ids.indexOf(x.cat.id) !== -1; });
+  }
   if (state.tag) list = list.filter(function(x){ return x.note.tags.indexOf(state.tag) !== -1; });
   if (state.query){
     var q = state.query.toLowerCase();
@@ -938,6 +1071,53 @@ function handleHash(){
   }
 }
 
+/* ================= 编辑器工具栏 ================= */
+function wrapSelection(before, after){
+  var ta = document.getElementById('edContent');
+  var start = ta.selectionStart, end = ta.selectionEnd;
+  var val = ta.value;
+  var selected = val.slice(start, end);
+  ta.value = val.slice(0, start) + before + selected + after + val.slice(end);
+  ta.focus();
+  ta.selectionStart = start + before.length;
+  ta.selectionEnd = start + before.length + selected.length;
+}
+function applyFontSize(size){
+  if (!size) return;
+  wrapSelection('{s:' + size + '}', '{/s}');
+  document.getElementById('edFontSize').value = '';
+}
+function applyFontColor(color){
+  wrapSelection('{c:' + color + '}', '{/c}');
+}
+function clearFormat(){
+  var ta = document.getElementById('edContent');
+  var start = ta.selectionStart, end = ta.selectionEnd;
+  var val = ta.value;
+  var selected = val.slice(start, end) || val;
+  var cleaned = selected.replace(/\{c:[^}]+\}|\{\/c\}|\{s:\d+\}|\{\/s\}/g, '');
+  if (selected === val){
+    ta.value = cleaned;
+  } else {
+    ta.value = val.slice(0, start) + cleaned + val.slice(end);
+  }
+  ta.focus();
+}
+function insertMd(type){
+  if (type === 'bold'){ wrapSelection('**','**'); return; }
+  if (type === 'italic'){ wrapSelection('*','*'); return; }
+  var ta = document.getElementById('edContent');
+  var start = ta.selectionStart;
+  var val = ta.value;
+  var lineStart = val.lastIndexOf('\n', start - 1) + 1;
+  var prefix = '';
+  if (type === 'h2') prefix = '## ';
+  else if (type === 'list') prefix = '- ';
+  else if (type === 'quote') prefix = '> ';
+  ta.value = val.slice(0, lineStart) + prefix + val.slice(lineStart);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = lineStart + prefix.length;
+}
 /* ================= 编辑弹窗 ================= */
 function openEditor(mode, noteId){
   editor.mode = mode; editor.noteId = noteId || null;
@@ -1029,19 +1209,84 @@ function deleteNote(){
 }
 
 /* ================= 分类与备份 ================= */
-function addCategory(){
-  var name = prompt('输入新分类名称：');
+/* ================= 分类管理 ================= */
+function catByName(name){
+  for (var i=0;i<current.categories.length;i++){ if (current.categories[i].name===name) return current.categories[i]; }
+  return null;
+}
+function toggleCollapse(id){
+  var c = findCat(id);
+  if (c){ c.collapsed = !c.collapsed; persist(); renderSidebar(); }
+}
+function renameCategory(id){
+  var c = findCat(id);
+  if (!c) return;
+  var name = prompt('重命名分类：', c.name);
   if (!name || !name.trim()) return;
   name = name.trim();
-  if (findCat(name)){ showToast('已存在同名分类'); return; }
-  var c = { id: genId('c'), name: name, icon: 'folder', notes: [] };
+  if (name !== c.name && catByName(name)){ showToast('已存在同名分类'); return; }
+  c.name = name;
+  persist();
+  renderSidebar(); renderList(); renderNote();
+  showToast('已重命名');
+  maybePush();
+}
+function deleteCategory(id){
+  var c = findCat(id);
+  if (!c) return;
+  if (childrenOf(id).length > 0){ showToast('请先删除或移走子分类'); return; }
+  var others = current.categories.filter(function(x){ return x.id !== id; });
+  if (c.notes.length > 0){
+    if (others.length === 0){ showToast('至少保留一个分类'); return; }
+    if (!confirm('分类“' + c.name + '”下有 ' + c.notes.length + ' 篇笔记，删除后笔记将移到“' + others[0].name + '”，确定删除？')) return;
+    c.notes.forEach(function(n){ others[0].notes.unshift(n); });
+  } else {
+    if (!confirm('确定删除分类“' + c.name + '”？')) return;
+  }
+  current.categories = others;
+  if (state.cat === id) state.cat = 'all';
+  persist();
+  renderSidebar(); renderList(); renderNote(); updateHash();
+  showToast('已删除分类');
+  maybePush();
+}
+var selectedIcon = 'folder';
+function openNewCat(defaultParent){
+  document.getElementById('newCatName').value = '';
+  selectedIcon = 'folder';
+  var sel = document.getElementById('newCatParent');
+  var opts = '<option value="">（顶级分类）</option>';
+  current.categories.forEach(function(c){
+    var d = catDepth(c.id);
+    opts += '<option value="' + c.id + '"' + (defaultParent===c.id?' selected':'') + '>' + Array(d+1).join('　') + escapeHtml(c.name) + '</option>';
+  });
+  sel.innerHTML = opts;
+  renderIconPicker();
+  document.getElementById('catMask').hidden = false;
+  document.getElementById('newCatName').focus();
+}
+function renderIconPicker(){
+  var picker = document.getElementById('iconPicker');
+  var names = ['folder','book','briefcase','home','calendar'];
+  picker.innerHTML = names.map(function(n){
+    return '<button type="button" data-icon="' + n + '" class="' + (n===selectedIcon?'sel':'') + '">' + (ICONS[n]||ICONS.folder) + '</button>';
+  }).join('');
+}
+function saveNewCat(){
+  var name = document.getElementById('newCatName').value.trim();
+  if (!name){ showToast('请输入分类名称'); return; }
+  if (catByName(name)){ showToast('已存在同名分类'); return; }
+  var parent = document.getElementById('newCatParent').value || null;
+  var c = { id: genId('c'), name: name, icon: selectedIcon, parent: parent, collapsed: false, notes: [] };
   current.categories.push(c);
   persist();
+  document.getElementById('catMask').hidden = true;
   renderSidebar();
   openCategory(c.id);
   showToast('已新建分类：' + name);
   maybePush();
 }
+function addCategory(){ openNewCat(null); }
 function exportData(){
   var blob = new Blob([JSON.stringify(current, null, 2)], { type: 'application/json' });
   var a = document.createElement('a');
@@ -1316,6 +1561,12 @@ function bind(){
   });
 
   document.getElementById('catNav').addEventListener('click', function(e){
+    var t = e.target.closest('[data-toggle]');
+    if (t){ toggleCollapse(t.getAttribute('data-toggle')); return; }
+    var r = e.target.closest('[data-rename]');
+    if (r){ renameCategory(r.getAttribute('data-rename')); return; }
+    var d = e.target.closest('[data-delcat]');
+    if (d){ deleteCategory(d.getAttribute('data-delcat')); return; }
     var b = e.target.closest('.cat');
     if (b) openCategory(b.getAttribute('data-cat'));
   });
@@ -1358,9 +1609,23 @@ function bind(){
   document.getElementById('editorMask').addEventListener('click', function(e){
     if (e.target === this) closeEditor();
   });
+  /* 编辑器工具栏 */
+  document.querySelectorAll('.ed-toolbar [data-md]').forEach(function(btn){
+    btn.addEventListener('click', function(){ insertMd(this.getAttribute('data-md')); });
+  });
+  document.getElementById('edFontSize').addEventListener('change', function(){ applyFontSize(this.value); });
+  document.getElementById('edFontColor').addEventListener('input', function(){ applyFontColor(this.value); });
+  document.getElementById('edClearFmt').addEventListener('click', clearFormat);
 
   /* 分类与备份 */
   document.getElementById('addCatBtn').addEventListener('click', addCategory);
+  document.getElementById('newCatCancel').addEventListener('click', function(){ document.getElementById('catMask').hidden = true; });
+  document.getElementById('newCatSave').addEventListener('click', saveNewCat);
+  document.getElementById('catMask').addEventListener('click', function(e){ if (e.target === this) this.hidden = true; });
+  document.getElementById('iconPicker').addEventListener('click', function(e){
+    var b = e.target.closest('[data-icon]');
+    if (b){ selectedIcon = b.getAttribute('data-icon'); renderIconPicker(); }
+  });
   document.getElementById('exportBtn').addEventListener('click', exportData);
   document.getElementById('importBtn').addEventListener('click', function(){ document.getElementById('importFile').click(); });
   document.getElementById('importFile').addEventListener('change', function(){
