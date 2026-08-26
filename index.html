@@ -157,7 +157,10 @@ a:hover{text-decoration:underline}
 .side-label{
   font-size:11px;letter-spacing:.14em;color:var(--muted);
   padding:10px 10px 6px;text-transform:uppercase;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
 }
+.side-label .expand-all-btn{font-size:10.5px;letter-spacing:0;color:var(--muted);background:none;border:1px solid var(--line);cursor:pointer;padding:2px 7px;border-radius:5px;transition:all .12s;text-transform:none}
+.side-label .expand-all-btn:hover{background:var(--surface-2);color:var(--ink);border-color:var(--ink-soft)}
 .cat{
   display:flex;align-items:center;gap:9px;
   padding:9px 10px;border-radius:9px;
@@ -172,13 +175,13 @@ a:hover{text-decoration:underline}
 .cat.active .cat-count{color:var(--accent)}
 /* 分类树 */
 .cat-row{display:flex;align-items:center;gap:6px;flex:1;min-width:0}
-.cat-toggle{width:16px;height:16px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer;border-radius:4px;transition:transform .15s}
-.cat-toggle:hover{background:var(--surface-2)}
+.cat-toggle{width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);cursor:pointer;border-radius:5px;transition:transform .15s,background .12s}
+.cat-toggle:hover{background:var(--surface-2);color:var(--ink)}
 .cat-toggle.collapsed{transform:rotate(-90deg)}
 .cat-toggle.empty{visibility:hidden}
-.cat-actions{margin-left:auto;display:none;gap:1px;flex:none}
-.cat:hover .cat-actions{display:flex}
-.cat-act{width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:5px;color:var(--muted);cursor:pointer;flex:none;font-size:13px}
+.cat-actions{margin-left:auto;display:flex;gap:1px;flex:none;opacity:.4;transition:opacity .15s}
+.cat:hover .cat-actions{opacity:1}
+.cat-act{width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:5px;color:var(--muted);cursor:pointer;flex:none;font-size:13px}
 .cat-act:hover{background:var(--surface);color:var(--ink)}
 .cat-act.del:hover{color:var(--danger);background:var(--danger-soft)}
 .cat .cat-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
@@ -915,7 +918,7 @@ function catNoteCount(id){
 function renderSidebar(){
   var nav = document.getElementById('catNav');
   var html = '';
-  html += '<div class="side-label">分类</div>';
+  html += '<div class="side-label"><span>分类</span><button class="expand-all-btn" id="expandAllBtn">展开全部</button></div>';
   html += catButton('all', 'folder', '全部笔记', allNotes().length, 0, false, false);
   childrenOf(null).forEach(function(c){ html += renderCatNode(c); });
   nav.innerHTML = html;
@@ -1218,6 +1221,12 @@ function toggleCollapse(id){
   var c = findCat(id);
   if (c){ c.collapsed = !c.collapsed; persist(); renderSidebar(); }
 }
+function expandAll(){
+  current.categories.forEach(function(c){ c.collapsed = false; });
+  persist();
+  renderSidebar();
+  showToast('已展开全部分类');
+}
 function renameCategory(id){
   var c = findCat(id);
   if (!c) return;
@@ -1234,17 +1243,19 @@ function renameCategory(id){
 function deleteCategory(id){
   var c = findCat(id);
   if (!c) return;
-  if (childrenOf(id).length > 0){ showToast('请先删除或移走子分类'); return; }
   var others = current.categories.filter(function(x){ return x.id !== id; });
-  if (c.notes.length > 0){
-    if (others.length === 0){ showToast('至少保留一个分类'); return; }
-    if (!confirm('分类“' + c.name + '”下有 ' + c.notes.length + ' 篇笔记，删除后笔记将移到“' + others[0].name + '”，确定删除？')) return;
-    c.notes.forEach(function(n){ others[0].notes.unshift(n); });
-  } else {
-    if (!confirm('确定删除分类“' + c.name + '”？')) return;
-  }
+  if (others.length === 0){ showToast('至少保留一个分类'); return; }
+  var kidCount = childrenOf(id).length;
+  var msg = '确定删除分类“' + c.name + '”？';
+  if (kidCount > 0) msg += '\n其下 ' + kidCount + ' 个子分类将提升为顶级分类。';
+  if (c.notes.length > 0) msg += '\n该分类下 ' + c.notes.length + ' 篇笔记将移到“' + others[0].name + '”。';
+  if (!confirm(msg)) return;
+  // 子分类提升为顶级
+  current.categories.forEach(function(x){ if (x.parent === id) x.parent = null; });
+  // 笔记移到第一个其他分类
+  c.notes.forEach(function(n){ others[0].notes.unshift(n); });
   current.categories = others;
-  if (state.cat === id) state.cat = 'all';
+  if (state.cat === id || descendantIds(id).indexOf(state.cat) !== -1) state.cat = 'all';
   persist();
   renderSidebar(); renderList(); renderNote(); updateHash();
   showToast('已删除分类');
@@ -1561,6 +1572,7 @@ function bind(){
   });
 
   document.getElementById('catNav').addEventListener('click', function(e){
+    if (e.target.id === 'expandAllBtn'){ expandAll(); return; }
     var t = e.target.closest('[data-toggle]');
     if (t){ toggleCollapse(t.getAttribute('data-toggle')); return; }
     var r = e.target.closest('[data-rename]');
