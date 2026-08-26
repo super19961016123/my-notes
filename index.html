@@ -1237,8 +1237,28 @@ function applyFontSize(size){
   document.getElementById('edFontSize').value = '';
 }
 function insertTaskItem(){
-  document.getElementById('edContent').focus();
-  document.execCommand('insertHTML', false, '<div class="task-item"><span class="box"></span>待办事项</div><p><br></p>');
+  var ed = document.getElementById('edContent');
+  ed.focus();
+  var sel = window.getSelection();
+  if (!sel.rangeCount) return;
+  var range = sel.getRangeAt(0);
+  range.deleteContents();
+
+  var item = document.createElement('div');
+  item.className = 'task-item';
+  var box = document.createElement('span');
+  box.className = 'box';
+  var text = document.createElement('span');
+  text.textContent = '待办事项';
+  item.appendChild(box);
+  item.appendChild(text);
+
+  range.insertNode(item);
+
+  var r = document.createRange();
+  r.selectNodeContents(text);
+  sel.removeAllRanges();
+  sel.addRange(r);
 }
 /* ================= 编辑弹窗 ================= */
 function openEditor(mode, noteId){
@@ -1787,6 +1807,15 @@ function bind(){
   document.getElementById('edClearFmt').addEventListener('click', function(){
     document.getElementById('edContent').focus();
     document.execCommand('removeFormat');
+  });
+  /* 编辑器内待办方框点击勾选 */
+  document.getElementById('edContent').addEventListener('click', function(e){
+    var box = e.target.closest('.task-item .box');
+    if (box){
+      var item = box.closest('.task-item');
+      if (item) item.classList.toggle('done');
+      e.preventDefault();
+    }
   });
 
   /* 分类与备份 */
