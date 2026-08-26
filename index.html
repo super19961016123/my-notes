@@ -1248,15 +1248,15 @@ function insertTaskItem(){
   item.className = 'task-item';
   var box = document.createElement('span');
   box.className = 'box';
-  var text = document.createElement('span');
-  text.textContent = '待办事项';
   item.appendChild(box);
-  item.appendChild(text);
+  item.appendChild(document.createTextNode('待办事项'));
 
   range.insertNode(item);
 
+  var textNode = item.lastChild;
   var r = document.createRange();
-  r.selectNodeContents(text);
+  r.setStart(textNode, 0);
+  r.setEnd(textNode, 4);
   sel.removeAllRanges();
   sel.addRange(r);
 }
