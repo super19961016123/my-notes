@@ -175,16 +175,31 @@ a:hover{text-decoration:underline}
 .cat.active .cat-count{color:var(--accent)}
 /* 分类树 */
 .cat-row{display:flex;align-items:center;gap:6px;flex:1;min-width:0}
-.cat-toggle{width:24px;height:24px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);cursor:pointer;border-radius:6px;transition:transform .15s,background .12s}
-.cat-toggle:hover{background:var(--surface-2);color:var(--ink)}
-.cat-toggle.collapsed{transform:rotate(-90deg)}
-.cat-toggle.empty{visibility:hidden}
+/* 分类树（竖线树形） */
+.tree-root{display:flex;flex-direction:column;gap:1px}
+.tree-node{display:flex;flex-direction:column}
+.tree-children{
+  margin-left:12px;padding-left:13px;
+  border-left:1.5px solid var(--line);
+  display:flex;flex-direction:column;gap:1px;
+}
+.tree-toggle{
+  width:18px;height:18px;flex:none;
+  display:flex;align-items:center;justify-content:center;
+  border:1.5px solid var(--line);border-radius:4px;
+  font-size:14px;font-weight:700;line-height:1;
+  color:var(--ink-soft);background:var(--surface);
+  cursor:pointer;transition:all .12s;
+}
+.tree-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.tree-toggle.empty{visibility:hidden}
+.cat.tree-item{padding:8px 10px;gap:8px}
 .cat-actions{display:flex;gap:3px;flex:none;opacity:.6;transition:opacity .15s}
 .cat:hover .cat-actions{opacity:1}
 .cat-act{width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:var(--muted);cursor:pointer;flex:none;font-size:13px;transition:all .12s}
 .cat-act:hover{background:var(--surface);color:var(--ink)}
 .cat-act.del:hover{color:var(--danger);background:var(--danger-soft)}
-.cat .cat-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.cat .cat-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
 /* 编辑器工具栏 */
 .ed-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:7px 9px;border:1px solid var(--line);border-bottom:none;border-radius:9px 9px 0 0;background:var(--surface-2)}
 .ed-toolbar .tb-sep{width:1px;height:18px;background:var(--line);margin:0 3px;flex:none}
@@ -923,34 +938,38 @@ function renderSidebar(){
   var nav = document.getElementById('catNav');
   var html = '';
   html += '<div class="side-label"><span>分类</span><button class="expand-all-btn" id="expandAllBtn">展开全部</button></div>';
+  html += '<div class="tree-root">';
   html += catButton('all', 'folder', '全部笔记', allNotes().length, 0, false, false);
   childrenOf(null).forEach(function(c){ html += renderCatNode(c); });
+  html += '</div>';
   nav.innerHTML = html;
 }
 function renderCatNode(c){
   var kids = childrenOf(c.id);
-  var html = catButton(c.id, c.icon, c.name, catNoteCount(c.id), catDepth(c.id), kids.length > 0, c.collapsed);
+  var html = '<div class="tree-node">';
+  html += catButton(c.id, c.icon, c.name, catNoteCount(c.id), catDepth(c.id), kids.length > 0, c.collapsed);
   if (kids.length > 0 && !c.collapsed){
+    html += '<div class="tree-children">';
     kids.forEach(function(k){ html += renderCatNode(k); });
+    html += '</div>';
   }
+  html += '</div>';
   return html;
 }
 function catButton(id, icon, name, count, depth, hasKids, collapsed){
   var active = state.cat === id ? ' active' : '';
-  var pad = 10 + (depth || 0) * 14;
   var toggle = hasKids
-    ? '<span class="cat-toggle' + (collapsed ? ' collapsed' : '') + '" data-toggle="' + id + '"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>'
-    : '<span class="cat-toggle empty"></span>';
+    ? '<span class="tree-toggle' + (collapsed ? ' collapsed' : '') + '" data-toggle="' + id + '">' + (collapsed ? '+' : '−') + '</span>'
+    : '<span class="tree-toggle empty"></span>';
   var acts = id === 'all' ? '' :
     '<span class="cat-actions">' +
       '<span class="cat-act" data-rename="' + id + '" title="重命名"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>' +
       '<span class="cat-act del" data-delcat="' + id + '" title="删除"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></span>' +
     '</span>';
-  return '<button class="cat' + active + '" data-cat="' + id + '" style="padding-left:' + pad + 'px">' +
-    '<span class="cat-row">' + toggle +
-      '<span class="cat-ico">' + (ICONS[icon] || ICONS.folder) + '</span>' +
-      '<span class="cat-name">' + escapeHtml(name) + '</span>' +
-    '</span>' +
+  return '<button class="cat tree-item' + active + '" data-cat="' + id + '">' +
+    toggle +
+    '<span class="cat-ico">' + (ICONS[icon] || ICONS.folder) + '</span>' +
+    '<span class="cat-name">' + escapeHtml(name) + '</span>' +
     '<span class="cat-count">' + count + '</span>' + acts +
   '</button>';
 }
