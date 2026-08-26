@@ -378,7 +378,9 @@ a:hover{text-decoration:underline}
 .note-body .tasks .box{
   width:15px;height:15px;flex:none;margin-top:4px;
   border:1.5px solid var(--muted);border-radius:4px;display:inline-block;
+  cursor:pointer;transition:all .12s;
 }
+.note-body .tasks .box:hover{border-color:var(--accent)}
 .note-body .tasks li.done{color:var(--muted);text-decoration:line-through}
 .note-body .tasks li.done .box{background:var(--accent);border-color:var(--accent)}
 .note-body a{text-decoration:underline;text-underline-offset:3px}
@@ -823,7 +825,7 @@ function inline(s){
 }
 function parseMarkdown(text){
   var lines = text.replace(/\r\n/g,'\n').split('\n');
-  var html = '', i = 0, inCode = false, codeBuf = [];
+  var html = '', i = 0, inCode = false, codeBuf = [], taskCounter = 0;
   while (i < lines.length){
     var line = lines[i];
     if (/^\s*```/.test(line)){
@@ -844,7 +846,8 @@ function parseMarkdown(text){
       var tasks = [];
       while (i < lines.length && /^\s*[-*]\s*\[( |x|X)\]\s*/.test(lines[i])){
         var tm = lines[i].match(/^\s*[-*]\s*\[( |x|X)\]\s*(.*)$/);
-        tasks.push('<li class="' + (tm[1].toLowerCase() === 'x' ? 'done' : '') + '"><span class="box"></span>' + inline(tm[2]) + '</li>');
+        tasks.push('<li class="' + (tm[1].toLowerCase() === 'x' ? 'done' : '') + '"><span class="box" data-task-index="' + taskCounter + '"></span>' + inline(tm[2]) + '</li>');
+        taskCounter++;
         i++;
       }
       html += '<ul class="tasks">' + tasks.join('') + '</ul>'; continue;
@@ -1052,6 +1055,28 @@ function moveNote(direction){
   maybePush();
   showToast(direction < 0 ? '已上移' : '已下移');
 }
+/* ================= 待办勾选 ================= */
+function toggleTask(noteId, taskIndex){
+  var f = findNote(noteId);
+  if (!f) return;
+  var lines = f.note.content.split('\n');
+  var count = 0;
+  for (var i = 0; i < lines.length; i++){
+    var m = lines[i].match(/^(\s*[-*]\s*)\[( |x|X)\](\s*.*)$/);
+    if (m){
+      if (count === taskIndex){
+        var checked = m[2].toLowerCase() === 'x';
+        lines[i] = m[1] + '[' + (checked ? ' ' : 'x') + ']' + m[3];
+        break;
+      }
+      count++;
+    }
+  }
+  f.note.content = lines.join('\n');
+  persist();
+  renderNote();
+  maybePush();
+}
 /* ================= 渲染：正文 ================= */
 function renderNote(){
   var wrap = document.getElementById('contentWrap');
@@ -1092,6 +1117,12 @@ function renderNote(){
   if (up) up.addEventListener('click', function(){ moveNote(-1); });
   var down = document.getElementById('moveDownBtn');
   if (down) down.addEventListener('click', function(){ moveNote(1); });
+  document.querySelectorAll('.note-body .box').forEach(function(box){
+    box.addEventListener('click', function(){
+      var idx = parseInt(this.getAttribute('data-task-index'), 10);
+      toggleTask(state.note, idx);
+    });
+  });
 }
 
 /* ================= 路由与交互 ================= */
