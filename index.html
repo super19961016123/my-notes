@@ -193,13 +193,13 @@ a:hover{text-decoration:underline}
 }
 .tree-toggle:hover{border-color:var(--accent);color:var(--accent)}
 .tree-toggle.empty{visibility:hidden}
-.cat.tree-item{padding:1px 5px;gap:4px;font-size:12px;border-radius:5px;line-height:1.1;min-height:0;height:22px;box-sizing:border-box}
+.cat.tree-item{padding:1px 5px;gap:4px;font-size:12px;border-radius:5px;line-height:1.1;min-height:0;height:22px;box-sizing:border-box;display:flex;align-items:center}
 .cat.tree-item.active{padding:1px 5px;height:22px}
-.cat.tree-item .cat-ico{width:12px;height:12px}
-.cat.tree-item .cat-act{width:16px;height:16px}
+.cat.tree-item .cat-ico{width:12px;height:12px;flex:none}
+.cat.tree-item .cat-act{width:16px;height:16px;flex:none}
 .cat.tree-item .cat-act svg{width:10px;height:10px}
 .cat.tree-item .cat-count{font-size:10px}
-.tree-toggle{width:12px;height:12px;font-size:10px}
+.tree-toggle{width:12px;height:12px;font-size:10px;flex:none}
 .tree-children{margin-left:5px;padding-left:7px}
 .cat-actions{display:flex;gap:3px;flex:none;opacity:.6;transition:opacity .15s}
 .cat:hover .cat-actions{opacity:1}
