@@ -176,24 +176,28 @@ a:hover{text-decoration:underline}
 /* 分类树 */
 .cat-row{display:flex;align-items:center;gap:6px;flex:1;min-width:0}
 /* 分类树（竖线树形） */
-.tree-root{display:flex;flex-direction:column;gap:1px}
+.tree-root{display:flex;flex-direction:column;gap:0}
 .tree-node{display:flex;flex-direction:column}
 .tree-children{
-  margin-left:12px;padding-left:13px;
+  margin-left:8px;padding-left:9px;
   border-left:1.5px solid var(--line);
-  display:flex;flex-direction:column;gap:1px;
+  display:flex;flex-direction:column;gap:0;
 }
 .tree-toggle{
-  width:18px;height:18px;flex:none;
+  width:15px;height:15px;flex:none;
   display:flex;align-items:center;justify-content:center;
-  border:1.5px solid var(--line);border-radius:4px;
-  font-size:14px;font-weight:700;line-height:1;
+  border:1.5px solid var(--line);border-radius:3px;
+  font-size:12px;font-weight:700;line-height:1;
   color:var(--ink-soft);background:var(--surface);
   cursor:pointer;transition:all .12s;
 }
 .tree-toggle:hover{border-color:var(--accent);color:var(--accent)}
 .tree-toggle.empty{visibility:hidden}
-.cat.tree-item{padding:8px 10px;gap:8px}
+.cat.tree-item{padding:4px 7px;gap:5px;font-size:13px;border-radius:6px}
+.cat.tree-item .cat-ico{width:14px;height:14px}
+.cat.tree-item .cat-act{width:19px;height:19px}
+.cat.tree-item .cat-act svg{width:12px;height:12px}
+.cat.tree-item .cat-count{font-size:11px}
 .cat-actions{display:flex;gap:3px;flex:none;opacity:.6;transition:opacity .15s}
 .cat:hover .cat-actions{opacity:1}
 .cat-act{width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:var(--muted);cursor:pointer;flex:none;font-size:13px;transition:all .12s}
@@ -208,6 +212,24 @@ a:hover{text-decoration:underline}
 .ed-toolbar select{height:26px;padding:0 5px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:12px}
 .ed-toolbar input[type=color]{width:26px;height:26px;padding:0;border:1px solid var(--line);border-radius:6px;background:transparent;cursor:pointer;flex:none}
 #edContent{border-radius:0 0 9px 9px;border-top:none;min-height:200px}
+.editable-content{
+  min-height:200px;max-height:55vh;overflow-y:auto;
+  padding:12px 14px;
+  border:1px solid var(--line);border-top:none;
+  border-radius:0 0 9px 9px;
+  background:var(--surface);color:var(--ink);
+  font-size:14px;line-height:1.8;outline:none;
+}
+.editable-content:focus{border-color:var(--accent)}
+.editable-content:empty:before{content:attr(placeholder);color:var(--muted)}
+.editable-content h2{font-size:18px;font-weight:700;margin:12px 0 6px}
+.editable-content ul{padding-left:20px;margin:6px 0}
+.editable-content blockquote{border-left:3px solid var(--accent);padding-left:12px;color:var(--ink-soft);margin:8px 0}
+.editable-content .task-item,.note-body .task-item{display:flex;align-items:flex-start;gap:8px;margin:5px 0}
+.editable-content .task-item .box,.note-body .task-item .box{width:15px;height:15px;flex:none;margin-top:3px;border:1.5px solid var(--muted);border-radius:4px;cursor:pointer;flex:none;transition:all .12s}
+.editable-content .task-item.done,.note-body .task-item.done{color:var(--muted);text-decoration:line-through}
+.editable-content .task-item.done .box,.note-body .task-item.done .box{background:var(--accent);border-color:var(--accent)}
+.note-body .task-item .box:hover{border-color:var(--accent)}
 .icon-picker{display:flex;flex-wrap:wrap;gap:6px}
 .icon-picker button{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);cursor:pointer}
 .icon-picker button.sel{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
@@ -585,14 +607,15 @@ body.drawer-open .scrim{display:block}
         <input type="text" id="edTags" placeholder="例如：工作, 会议, 待办">
       </div>
       <div class="field">
-        <label for="edContent">内容（支持简易排版）</label>
+        <label>内容（选中文字点上方按钮即可排版）</label>
         <div class="ed-toolbar">
-          <button type="button" data-md="bold" title="加粗"><b>B</b></button>
-          <button type="button" data-md="italic" title="斜体"><i>I</i></button>
+          <button type="button" data-cmd="bold" title="加粗"><b>B</b></button>
+          <button type="button" data-cmd="italic" title="斜体"><i>I</i></button>
           <span class="tb-sep"></span>
-          <button type="button" data-md="h2" title="小标题">H2</button>
-          <button type="button" data-md="list" title="列表">• 列表</button>
-          <button type="button" data-md="quote" title="引用">”</button>
+          <button type="button" data-cmd="h2" title="小标题">H2</button>
+          <button type="button" data-cmd="list" title="无序列表">• 列表</button>
+          <button type="button" data-cmd="quote" title="引用">”</button>
+          <button type="button" data-cmd="task" title="待办清单">☑ 待办</button>
           <span class="tb-sep"></span>
           <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)">字号
             <select id="edFontSize">
@@ -606,11 +629,10 @@ body.drawer-open .scrim{display:block}
           <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)">颜色
             <input type="color" id="edFontColor" value="#1a1a1a">
           </label>
-          <button type="button" id="edClearFmt" title="清除选中文字的颜色和字号">清除格式</button>
+          <button type="button" id="edClearFmt" title="清除选中文字的格式">清除格式</button>
         </div>
-        <textarea id="edContent" placeholder="开始写…&#10;&#10;支持：## 小标题、- 列表、**加粗**、`代码`、> 引用、- [ ] 待办"></textarea>
+        <div id="edContent" contenteditable="true" class="editable-content" placeholder="开始写…"></div>
       </div>
-      <div class="ed-hint">排版小技巧：<code>## 小标题</code>　<code>- 列表项</code>　<code>**加粗**</code>　<code>`代码`</code>　<code>&gt; 引用</code>　<code>- [ ] 待办</code></div>
     </div>
     <div class="modal-foot">
       <button class="danger-btn" id="edDelete" style="display:none">
@@ -792,6 +814,7 @@ function normalizeData(d){
     if (c.collapsed === undefined) c.collapsed = false;
     if (!c.icon) c.icon = 'folder';
     if (!Array.isArray(c.notes)) c.notes = [];
+    c.notes.forEach(function(n){ if (n.format === undefined) n.format = 'md'; });
   });
   return d;
 }
@@ -1107,7 +1130,7 @@ function renderNote(){
     '</div>' +
     '<h1 class="note-title">' + escapeHtml(n.title) + '</h1>' +
     '<div class="note-tags">' + tags + '</div>' +
-    '<div class="note-body">' + parseMarkdown(n.content) + '</div>' +
+    '<div class="note-body">' + (n.format === 'html' ? n.content : parseMarkdown(n.content)) + '</div>' +
     '<div class="note-edit-hint"><strong>这篇笔记存在当前设备浏览器里。</strong> 想改内容点右上角“编辑”；想让它出现在其他设备，用“导出备份”带走，或把内容发给我同步到云端。</div>';
   var back = document.getElementById('backBtn');
   if (back) back.addEventListener('click', function(){ closeReading(); });
@@ -1119,10 +1142,29 @@ function renderNote(){
   if (down) down.addEventListener('click', function(){ moveNote(1); });
   document.querySelectorAll('.note-body .box').forEach(function(box){
     box.addEventListener('click', function(){
-      var idx = parseInt(this.getAttribute('data-task-index'), 10);
-      toggleTask(state.note, idx);
+      var idx = this.getAttribute('data-task-index');
+      if (idx !== null){
+        toggleTask(state.note, parseInt(idx, 10));
+      } else {
+        var item = this.closest('.task-item');
+        if (item){
+          item.classList.toggle('done');
+          saveNoteBody(state.note);
+        }
+      }
     });
   });
+}
+function saveNoteBody(noteId){
+  var f = findNote(noteId);
+  if (!f) return;
+  var body = document.querySelector('.note-body');
+  if (body){
+    f.note.content = body.innerHTML;
+    f.note.format = 'html';
+    persist();
+    maybePush();
+  }
 }
 
 /* ================= 路由与交互 ================= */
@@ -1169,52 +1211,34 @@ function handleHash(){
   }
 }
 
-/* ================= 编辑器工具栏 ================= */
-function wrapSelection(before, after){
-  var ta = document.getElementById('edContent');
-  var start = ta.selectionStart, end = ta.selectionEnd;
-  var val = ta.value;
-  var selected = val.slice(start, end);
-  ta.value = val.slice(0, start) + before + selected + after + val.slice(end);
-  ta.focus();
-  ta.selectionStart = start + before.length;
-  ta.selectionEnd = start + before.length + selected.length;
+/* ================= 编辑器工具栏（富文本） ================= */
+function execCmd(cmd, val){
+  document.getElementById('edContent').focus();
+  document.execCommand(cmd, false, val || null);
 }
 function applyFontSize(size){
   if (!size) return;
-  wrapSelection('{s:' + size + '}', '{/s}');
+  var ed = document.getElementById('edContent');
+  ed.focus();
+  var sel = window.getSelection();
+  if (!sel.rangeCount || sel.getRangeAt(0).collapsed) return;
+  var range = sel.getRangeAt(0);
+  var span = document.createElement('span');
+  span.style.fontSize = size + 'px';
+  span.style.lineHeight = '1.6';
+  try {
+    span.appendChild(range.extractContents());
+    range.insertNode(span);
+    sel.removeAllRanges();
+    var r = document.createRange();
+    r.selectNodeContents(span);
+    sel.addRange(r);
+  } catch(e){}
   document.getElementById('edFontSize').value = '';
 }
-function applyFontColor(color){
-  wrapSelection('{c:' + color + '}', '{/c}');
-}
-function clearFormat(){
-  var ta = document.getElementById('edContent');
-  var start = ta.selectionStart, end = ta.selectionEnd;
-  var val = ta.value;
-  var selected = val.slice(start, end) || val;
-  var cleaned = selected.replace(/\{c:[^}]+\}|\{\/c\}|\{s:\d+\}|\{\/s\}/g, '');
-  if (selected === val){
-    ta.value = cleaned;
-  } else {
-    ta.value = val.slice(0, start) + cleaned + val.slice(end);
-  }
-  ta.focus();
-}
-function insertMd(type){
-  if (type === 'bold'){ wrapSelection('**','**'); return; }
-  if (type === 'italic'){ wrapSelection('*','*'); return; }
-  var ta = document.getElementById('edContent');
-  var start = ta.selectionStart;
-  var val = ta.value;
-  var lineStart = val.lastIndexOf('\n', start - 1) + 1;
-  var prefix = '';
-  if (type === 'h2') prefix = '## ';
-  else if (type === 'list') prefix = '- ';
-  else if (type === 'quote') prefix = '> ';
-  ta.value = val.slice(0, lineStart) + prefix + val.slice(lineStart);
-  ta.focus();
-  ta.selectionStart = ta.selectionEnd = lineStart + prefix.length;
+function insertTaskItem(){
+  document.getElementById('edContent').focus();
+  document.execCommand('insertHTML', false, '<div class="task-item"><span class="box"></span>待办事项</div><p><br></p>');
 }
 /* ================= 编辑弹窗 ================= */
 function openEditor(mode, noteId){
@@ -1232,7 +1256,7 @@ function openEditor(mode, noteId){
       document.getElementById('edTitle').value = f.note.title;
       sel.value = f.cat.id;
       document.getElementById('edTags').value = (f.note.tags || []).join(', ');
-      document.getElementById('edContent').value = f.note.content;
+      document.getElementById('edContent').innerHTML = f.note.format === 'html' ? f.note.content : parseMarkdown(f.note.content);
       document.getElementById('edDelete').style.display = '';
     }
   } else {
@@ -1240,7 +1264,7 @@ function openEditor(mode, noteId){
     var defCat = state.cat !== 'all' ? state.cat : (current.categories[0] ? current.categories[0].id : '');
     if (defCat) sel.value = defCat;
     document.getElementById('edTags').value = '';
-    document.getElementById('edContent').value = '';
+    document.getElementById('edContent').innerHTML = '';
     document.getElementById('edDelete').style.display = 'none';
   }
   document.getElementById('editorMask').hidden = false;
@@ -1251,7 +1275,7 @@ function closeEditor(){
 }
 function saveNote(){
   var title = document.getElementById('edTitle').value.trim();
-  var content = document.getElementById('edContent').value;
+  var content = document.getElementById('edContent').innerHTML;
   var catId = document.getElementById('edCat').value;
   var tags = document.getElementById('edTags').value.split(/[,，]/).map(function(s){ return s.trim(); }).filter(Boolean);
   if (!title){ showToast('请先填写标题'); return; }
@@ -1260,7 +1284,7 @@ function saveNote(){
 
   var savedId = editor.noteId;
   if (editor.mode === 'new'){
-    var n = { id: genId('n'), title: title, date: todayLabel(), tags: tags, content: content };
+    var n = { id: genId('n'), title: title, date: todayLabel(), tags: tags, content: content, format: 'html' };
     cat.notes.unshift(n);
     savedId = n.id;
   } else {
@@ -1272,6 +1296,7 @@ function saveNote(){
       }
       f.note.title = title;
       f.note.content = content;
+      f.note.format = 'html';
       f.note.tags = tags;
     }
   }
@@ -1739,13 +1764,30 @@ function bind(){
   document.getElementById('editorMask').addEventListener('click', function(e){
     if (e.target === this) closeEditor();
   });
-  /* 编辑器工具栏 */
-  document.querySelectorAll('.ed-toolbar [data-md]').forEach(function(btn){
-    btn.addEventListener('click', function(){ insertMd(this.getAttribute('data-md')); });
+  /* 编辑器工具栏（富文本） */
+  document.querySelectorAll('.ed-toolbar [data-cmd]').forEach(function(btn){
+    btn.addEventListener('mousedown', function(e){ e.preventDefault(); });
+    btn.addEventListener('click', function(){
+      var cmd = this.getAttribute('data-cmd');
+      if (cmd === 'bold') execCmd('bold');
+      else if (cmd === 'italic') execCmd('italic');
+      else if (cmd === 'h2') execCmd('formatBlock', 'h2');
+      else if (cmd === 'list') execCmd('insertUnorderedList');
+      else if (cmd === 'quote') execCmd('formatBlock', 'blockquote');
+      else if (cmd === 'task') insertTaskItem();
+    });
   });
   document.getElementById('edFontSize').addEventListener('change', function(){ applyFontSize(this.value); });
-  document.getElementById('edFontColor').addEventListener('input', function(){ applyFontColor(this.value); });
-  document.getElementById('edClearFmt').addEventListener('click', clearFormat);
+  document.getElementById('edFontColor').addEventListener('input', function(){
+    document.getElementById('edContent').focus();
+    document.execCommand('styleWithCSS', false, true);
+    document.execCommand('foreColor', false, this.value);
+  });
+  document.getElementById('edClearFmt').addEventListener('mousedown', function(e){ e.preventDefault(); });
+  document.getElementById('edClearFmt').addEventListener('click', function(){
+    document.getElementById('edContent').focus();
+    document.execCommand('removeFormat');
+  });
 
   /* 分类与备份 */
   document.getElementById('addCatBtn').addEventListener('click', addCategory);
