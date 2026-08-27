@@ -1453,22 +1453,46 @@ function insertTaskItem(){
 function insertImageHtml(src){
   var ed = document.getElementById('edContent');
   ed.focus();
-  document.execCommand('insertHTML', false, '<img src="' + src.replace(/"/g,'&quot;') + '" style="max-width:100%;height:auto;border-radius:6px;margin:6px 0;display:block;">');
+  var sel = window.getSelection();
+  var img = document.createElement('img');
+  img.src = src;
+  img.style.maxWidth = '100%';
+  img.style.height = 'auto';
+  img.style.borderRadius = '6px';
+  img.style.margin = '6px 0';
+  img.style.display = 'block';
+  if (sel.rangeCount){
+    var range = sel.getRangeAt(0);
+    range.deleteContents();
+    range.insertNode(img);
+    range.setStartAfter(img);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } else {
+    ed.appendChild(img);
+  }
 }
 function compressImage(file, maxWidth, quality, callback){
   var reader = new FileReader();
   reader.onload = function(e){
     var img = new Image();
     img.onload = function(){
-      var canvas = document.createElement('canvas');
-      var w = img.width, h = img.height;
-      if (w > maxWidth){ h = h * (maxWidth / w); w = maxWidth; }
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      callback(canvas.toDataURL('image/jpeg', quality));
+      try {
+        var canvas = document.createElement('canvas');
+        var w = img.width, h = img.height;
+        if (w > maxWidth){ h = h * (maxWidth / w); w = maxWidth; }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        callback(canvas.toDataURL('image/jpeg', quality));
+      } catch(err){
+        callback(e.target.result);
+      }
     };
+    img.onerror = function(){ callback(e.target.result); };
     img.src = e.target.result;
   };
+  reader.onerror = function(){ callback(''); };
   reader.readAsDataURL(file);
 }
 function insertImageFromFile(file){
