@@ -1264,7 +1264,46 @@ function applyFontSize(size){
 function insertTaskItem(){
   var ed = document.getElementById('edContent');
   ed.focus();
-  document.execCommand('insertHTML', false, '<p class="task-item"><span class="box"></span>&nbsp;</p>');
+  var sel = window.getSelection();
+  if (!sel.rangeCount) return;
+  var range = sel.getRangeAt(0);
+
+  // 找到光标所在的块级元素（段落/div/li）
+  var node = range.startContainer;
+  if (node.nodeType === 3) node = node.parentNode;
+  while (node && node !== ed && !/^(P|DIV|LI|H[1-6])$/i.test(node.tagName)) {
+    node = node.parentNode;
+  }
+
+  if (!node || node === ed) {
+    // 光标不在段落里，创建一个新待办段落
+    var p = document.createElement('p');
+    p.className = 'task-item';
+    var box0 = document.createElement('span');
+    box0.className = 'box';
+    p.appendChild(box0);
+    p.appendChild(document.createTextNode('\u00A0'));
+    range.insertNode(p);
+    // 光标移到方框后面
+    var r = document.createRange();
+    r.setStart(p.lastChild, 1);
+    r.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(r);
+    return;
+  }
+
+  // 已经是待办项 → 取消；不是 → 变成待办项
+  if (node.classList.contains('task-item')) {
+    node.classList.remove('task-item');
+    var oldBox = node.querySelector(':scope > .box');
+    if (oldBox) oldBox.remove();
+  } else {
+    node.classList.add('task-item');
+    var box = document.createElement('span');
+    box.className = 'box';
+    node.insertBefore(box, node.firstChild);
+  }
 }
 /* ================= 编辑弹窗 ================= */
 function openEditor(mode, noteId){
