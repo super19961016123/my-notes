@@ -229,7 +229,7 @@ a:hover{text-decoration:underline}
 .editable-content ul{padding-left:20px;margin:6px 0}
 .editable-content blockquote{border-left:3px solid var(--accent);padding-left:12px;color:var(--ink-soft);margin:8px 0}
 .editable-content .task-item,.note-body .task-item{display:block;margin:5px 0;line-height:1.8}
-.editable-content .task-item .box,.note-body .task-item .box{display:inline-block;width:14px;height:14px;vertical-align:middle;margin-right:6px;border:1.5px solid var(--muted);border-radius:4px;cursor:pointer;transition:all .12s}
+.editable-content .task-item .box,.note-body .task-item .box{display:inline-block;width:14px;height:14px;vertical-align:middle;margin-right:6px;border:1.5px solid var(--muted);border-radius:4px;cursor:pointer;transition:all .12s;user-select:none}
 .editable-content .task-item.done,.note-body .task-item.done{color:var(--muted);text-decoration:line-through}
 .editable-content .task-item.done .box,.note-body .task-item.done .box{background:var(--accent);border-color:var(--accent)}
 .note-body .task-item .box:hover{border-color:var(--accent)}
@@ -1281,6 +1281,7 @@ function insertTaskItem(){
     p.className = 'task-item';
     var box0 = document.createElement('span');
     box0.className = 'box';
+    box0.contentEditable = 'false';
     p.appendChild(box0);
     p.appendChild(document.createTextNode('\u00A0'));
     range.insertNode(p);
@@ -1302,6 +1303,7 @@ function insertTaskItem(){
     node.classList.add('task-item');
     var box = document.createElement('span');
     box.className = 'box';
+    box.contentEditable = 'false';
     node.insertBefore(box, node.firstChild);
   }
 }
