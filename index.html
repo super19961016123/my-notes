@@ -629,7 +629,6 @@ body.drawer-open .scrim{display:block}
           <button type="button" data-cmd="list" title="无序列表">• 列表</button>
           <button type="button" data-cmd="quote" title="引用">”</button>
           <button type="button" data-cmd="task" title="待办清单">☑ 待办</button>
-          <button type="button" id="insertImgBtn" title="插入图片">🖼 图片</button>
           <span class="tb-sep"></span>
           <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)">字号
             <select id="edFontSize">
@@ -646,7 +645,6 @@ body.drawer-open .scrim{display:block}
           <button type="button" id="edClearFmt" title="清除选中文字的格式">清除格式</button>
         </div>
         <div id="edContent" contenteditable="true" class="editable-content" placeholder="开始写…"></div>
-        <input type="file" id="imgFileInput" accept="image/*" multiple style="display:none">
       </div>
     </div>
     <div class="modal-foot">
@@ -843,7 +841,11 @@ function persist(){
     localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
     return true;
   } catch(e){
-    showToast('保存失败：浏览器存储不可用');
+    if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || (e.message && e.message.indexOf('quota') >= 0)){
+      showToast('保存失败：存储空间不足！请删除一些笔记或图片后再试');
+    } else {
+      showToast('保存失败：浏览器存储不可用');
+    }
     return false;
   }
 }
@@ -1449,83 +1451,6 @@ function insertTaskItem(){
     node.insertBefore(box, node.firstChild);
   }
 }
-/* ================= 图片插入 ================= */
-function insertImageHtml(src){
-  if (!src || src.length < 10) return;
-  var ed = document.getElementById('edContent');
-  ed.focus();
-  var html = '<img src="' + src.replace(/"/g,'&quot;') + '" style="max-width:100%;height:auto;border-radius:6px;margin:6px 0;display:block;">';
-  document.execCommand('insertHTML', false, html);
-}
-function compressImage(file, maxWidth, quality, callback){
-  var reader = new FileReader();
-  reader.onload = function(e){
-    var original = e.target.result;
-    var img = new Image();
-    img.onload = function(){
-      if (!img.width || !img.height){ callback(original); return; }
-      try {
-        var canvas = document.createElement('canvas');
-        var w = img.width, h = img.height;
-        if (w > maxWidth){ h = Math.round(h * (maxWidth / w)); w = maxWidth; }
-        canvas.width = w; canvas.height = h;
-        var ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, w, h);
-        ctx.drawImage(img, 0, 0, w, h);
-        var dataUrl = canvas.toDataURL('image/jpeg', quality);
-        if (!dataUrl || dataUrl.length < 200) dataUrl = original;
-        callback(dataUrl);
-      } catch(err){
-        callback(original);
-      }
-    };
-    img.onerror = function(){ callback(original); };
-    img.src = original;
-  };
-  reader.onerror = function(){ callback(''); };
-  reader.readAsDataURL(file);
-}
-function insertImageFromFile(file){
-  if (!file || !file.type || !file.type.startsWith('image/')) return;
-  if (file.size > 3 * 1024 * 1024){
-    compressImage(file, 1600, 0.85, function(dataUrl){ insertImageHtml(dataUrl); });
-  } else {
-    var reader = new FileReader();
-    reader.onload = function(e){ insertImageHtml(e.target.result); };
-    reader.readAsDataURL(file);
-  }
-}
-function insertMultipleImages(files){
-  var arr = [];
-  var done = 0;
-  for (var i = 0; i < files.length; i++){
-    (function(idx){
-      var file = files[idx];
-      if (file.size > 3 * 1024 * 1024){
-        compressImage(file, 1600, 0.85, function(dataUrl){
-          arr[idx] = dataUrl; done++;
-          if (done === files.length){ for (var j = 0; j < arr.length; j++) insertImageHtml(arr[j]); }
-        });
-      } else {
-        var reader = new FileReader();
-        reader.onload = function(e){
-          arr[idx] = e.target.result; done++;
-          if (done === files.length){ for (var j = 0; j < arr.length; j++) insertImageHtml(arr[j]); }
-        };
-        reader.readAsDataURL(file);
-      }
-    })(i);
-  }
-}
-function insertImageFromUrl(){
-  var url = prompt('请输入图片网址（http:// 或 https:// 开头）：');
-  if (url && /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?.*)?$/i.test(url.trim())){
-    insertImageHtml(url.trim());
-  } else if (url){
-    alert('请输入有效的图片网址');
-  }
-}
 /* ================= 编辑弹窗 ================= */
 function openEditor(mode, noteId){
   editor.mode = mode; editor.noteId = noteId || null;
@@ -2087,30 +2012,6 @@ function bind(){
   document.getElementById('edClearFmt').addEventListener('click', function(){
     document.getElementById('edContent').focus();
     document.execCommand('removeFormat');
-  });
-  /* 图片插入 */
-  document.getElementById('insertImgBtn').addEventListener('mousedown', function(e){ e.preventDefault(); });
-  document.getElementById('insertImgBtn').addEventListener('click', function(){
-    if (confirm('点击「确定」上传本地图片（可一次选多张）\n点击「取消」输入网络图片网址')){
-      document.getElementById('imgFileInput').click();
-    } else {
-      insertImageFromUrl();
-    }
-  });
-  document.getElementById('imgFileInput').addEventListener('change', function(){
-    if (this.files && this.files.length > 0) insertMultipleImages(this.files);
-    this.value = '';
-  });
-  /* 粘贴图片自动插入 */
-  document.getElementById('edContent').addEventListener('paste', function(e){
-    var items = e.clipboardData ? e.clipboardData.items : [];
-    for (var i = 0; i < items.length; i++){
-      if (items[i].type.indexOf('image') !== -1){
-        e.preventDefault();
-        insertImageFromFile(items[i].getAsFile());
-        break;
-      }
-    }
   });
   /* 编辑器内待办方框点击勾选 */
   document.getElementById('edContent').addEventListener('click', function(e){
