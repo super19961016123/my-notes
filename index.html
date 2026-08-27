@@ -1351,55 +1351,56 @@ function applyFontSize(size){
   if (!sel.rangeCount) return;
   range = sel.getRangeAt(0);
 
-  // 光标模式（未选中文字）：自动找到包含光标的字号span并选中
-  if (range.collapsed){
-    var node = range.startContainer;
-    if (node.nodeType === 3) node = node.parentNode;
-    var fs = node.closest ? node.closest('span[style*="font-size"]') : null;
-    if (fs){
-      range.selectNodeContents(fs);
-      sel.removeAllRanges();
-      sel.addRange(range);
-    } else {
-      document.getElementById('edFontSize').value = '';
-      return;
-    }
-  }
+  // 找到包含选区的字号span
+  var container = range.commonAncestorContainer;
+  if (container.nodeType === 3) container = container.parentNode;
+  var fsSpan = container.closest ? container.closest('span[style*="font-size"]') : null;
 
   if (!size){
-    // 默认：清除字号和行高，保留其他格式
-    var div = document.createElement('div');
-    div.appendChild(range.extractContents());
-    var spans = div.querySelectorAll('span');
-    for (var i = 0; i < spans.length; i++){
-      var s = spans[i];
-      if (s.style.fontSize) s.style.fontSize = '';
-      if (s.style.lineHeight) s.style.lineHeight = '';
-      if (!s.getAttribute('style')){
-        var p = s.parentNode;
-        while (s.firstChild) p.insertBefore(s.firstChild, s);
-        p.removeChild(s);
+    // 默认：清除字号
+    if (fsSpan){
+      fsSpan.style.fontSize = '';
+      fsSpan.style.lineHeight = '';
+      if (!fsSpan.getAttribute('style')){
+        var p = fsSpan.parentNode;
+        while (fsSpan.firstChild) p.insertBefore(fsSpan.firstChild, fsSpan);
+        p.removeChild(fsSpan);
       }
     }
-    range.insertNode(div);
-    var parent = div.parentNode;
-    while (div.firstChild) parent.insertBefore(div.firstChild, div);
-    parent.removeChild(div);
     document.getElementById('edFontSize').value = '';
     return;
   }
 
-  var spanNew = document.createElement('span');
-  spanNew.style.fontSize = size + 'px';
-  spanNew.style.lineHeight = '1.6';
-  try {
-    spanNew.appendChild(range.extractContents());
-    range.insertNode(spanNew);
-    sel.removeAllRanges();
-    var r = document.createRange();
-    r.selectNodeContents(spanNew);
-    sel.addRange(r);
-  } catch(e){}
+  // 设置字号：如果已有字号span，直接修改；否则创建新span
+  if (fsSpan && range.collapsed){
+    fsSpan.style.fontSize = size + 'px';
+    fsSpan.style.lineHeight = '1.6';
+  } else if (fsSpan && !range.collapsed){
+    // 选中了部分文字，用新span包裹
+    var newSpan = document.createElement('span');
+    newSpan.style.fontSize = size + 'px';
+    newSpan.style.lineHeight = '1.6';
+    try {
+      newSpan.appendChild(range.extractContents());
+      range.insertNode(newSpan);
+      sel.removeAllRanges();
+      var r = document.createRange();
+      r.selectNodeContents(newSpan);
+      sel.addRange(r);
+    } catch(e){}
+  } else {
+    var spanNew = document.createElement('span');
+    spanNew.style.fontSize = size + 'px';
+    spanNew.style.lineHeight = '1.6';
+    try {
+      spanNew.appendChild(range.extractContents());
+      range.insertNode(spanNew);
+      sel.removeAllRanges();
+      var r2 = document.createRange();
+      r2.selectNodeContents(spanNew);
+      sel.addRange(r2);
+    } catch(e){}
+  }
   document.getElementById('edFontSize').value = '';
 }
 function insertTaskItem(){
@@ -2008,9 +2009,7 @@ function bind(){
   document.getElementById('edCancel').addEventListener('click', closeEditor);
   document.getElementById('edSave').addEventListener('click', saveNote);
   document.getElementById('edDelete').addEventListener('click', deleteNote);
-  document.getElementById('editorMask').addEventListener('click', function(e){
-    if (e.target === this) closeEditor();
-  });
+  /* 编辑器点击外面不关闭，只能点X/取消 */
   /* 编辑器工具栏（富文本） */
   document.querySelectorAll('.ed-toolbar [data-cmd]').forEach(function(btn){
     btn.addEventListener('mousedown', function(e){ e.preventDefault(); });
