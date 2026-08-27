@@ -1476,32 +1476,36 @@ function insertImageHtml(src){
 function compressImage(file, maxWidth, quality, callback){
   var reader = new FileReader();
   reader.onload = function(e){
+    var original = e.target.result;
     var img = new Image();
     img.onload = function(){
+      if (!img.width || !img.height){ callback(original); return; }
       try {
         var canvas = document.createElement('canvas');
         var w = img.width, h = img.height;
-        if (w > maxWidth){ h = h * (maxWidth / w); w = maxWidth; }
+        if (w > maxWidth){ h = Math.round(h * (maxWidth / w)); w = maxWidth; }
         canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        callback(canvas.toDataURL('image/jpeg', quality));
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        var dataUrl = canvas.toDataURL('image/jpeg', quality);
+        if (!dataUrl || dataUrl.length < 200) dataUrl = original;
+        callback(dataUrl);
       } catch(err){
-        callback(e.target.result);
+        callback(original);
       }
     };
-    img.onerror = function(){ callback(e.target.result); };
-    img.src = e.target.result;
+    img.onerror = function(){ callback(original); };
+    img.src = original;
   };
   reader.onerror = function(){ callback(''); };
   reader.readAsDataURL(file);
 }
 function insertImageFromFile(file){
   if (!file || !file.type || !file.type.startsWith('image/')) return;
-  if (file.size > 500 * 1024){
-    // 超过500KB自动压缩：最大宽度1200px，质量80%
-    compressImage(file, 1200, 0.8, function(dataUrl){
-      insertImageHtml(dataUrl);
-    });
+  if (file.size > 3 * 1024 * 1024){
+    compressImage(file, 1600, 0.85, function(dataUrl){ insertImageHtml(dataUrl); });
   } else {
     var reader = new FileReader();
     reader.onload = function(e){ insertImageHtml(e.target.result); };
@@ -1514,8 +1518,8 @@ function insertMultipleImages(files){
   for (var i = 0; i < files.length; i++){
     (function(idx){
       var file = files[idx];
-      if (file.size > 500 * 1024){
-        compressImage(file, 1200, 0.8, function(dataUrl){
+      if (file.size > 3 * 1024 * 1024){
+        compressImage(file, 1600, 0.85, function(dataUrl){
           arr[idx] = dataUrl; done++;
           if (done === files.length){ for (var j = 0; j < arr.length; j++) insertImageHtml(arr[j]); }
         });
