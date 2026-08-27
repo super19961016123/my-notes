@@ -233,6 +233,7 @@ a:hover{text-decoration:underline}
 .editable-content .task-item.done,.note-body .task-item.done{color:var(--muted);text-decoration:line-through}
 .editable-content .task-item.done .box,.note-body .task-item.done .box{background:var(--accent);border-color:var(--accent)}
 .note-body .task-item .box:hover{border-color:var(--accent)}
+.note-body img,.editable-content img{max-width:100%;height:auto;border-radius:6px;margin:6px 0;display:block}
 .icon-picker{display:flex;flex-wrap:wrap;gap:6px}
 .icon-picker button{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);cursor:pointer}
 .icon-picker button.sel{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
@@ -628,6 +629,7 @@ body.drawer-open .scrim{display:block}
           <button type="button" data-cmd="list" title="无序列表">• 列表</button>
           <button type="button" data-cmd="quote" title="引用">”</button>
           <button type="button" data-cmd="task" title="待办清单">☑ 待办</button>
+          <button type="button" id="insertImgBtn" title="插入图片">🖼 图片</button>
           <span class="tb-sep"></span>
           <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)">字号
             <select id="edFontSize">
@@ -644,6 +646,7 @@ body.drawer-open .scrim{display:block}
           <button type="button" id="edClearFmt" title="清除选中文字的格式">清除格式</button>
         </div>
         <div id="edContent" contenteditable="true" class="editable-content" placeholder="开始写…"></div>
+        <input type="file" id="imgFileInput" accept="image/*" style="display:none">
       </div>
     </div>
     <div class="modal-foot">
@@ -1404,6 +1407,29 @@ function insertTaskItem(){
     node.insertBefore(box, node.firstChild);
   }
 }
+/* ================= 图片插入 ================= */
+function insertImageHtml(src){
+  var ed = document.getElementById('edContent');
+  ed.focus();
+  document.execCommand('insertHTML', false, '<img src="' + src.replace(/"/g,'&quot;') + '" style="max-width:100%;height:auto;border-radius:6px;margin:6px 0;display:block;">');
+}
+function insertImageFromFile(file){
+  if (!file || !file.type || !file.type.startsWith('image/')) return;
+  if (file.size > 3 * 1024 * 1024){
+    if (!confirm('图片超过 3MB，插入后会占用较多存储空间，确定继续吗？')) return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e){ insertImageHtml(e.target.result); };
+  reader.readAsDataURL(file);
+}
+function insertImageFromUrl(){
+  var url = prompt('请输入图片网址（http:// 或 https:// 开头）：');
+  if (url && /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?.*)?$/i.test(url.trim())){
+    insertImageHtml(url.trim());
+  } else if (url){
+    alert('请输入有效的图片网址');
+  }
+}
 /* ================= 编辑弹窗 ================= */
 function openEditor(mode, noteId){
   editor.mode = mode; editor.noteId = noteId || null;
@@ -1967,6 +1993,30 @@ function bind(){
   document.getElementById('edClearFmt').addEventListener('click', function(){
     document.getElementById('edContent').focus();
     document.execCommand('removeFormat');
+  });
+  /* 图片插入 */
+  document.getElementById('insertImgBtn').addEventListener('mousedown', function(e){ e.preventDefault(); });
+  document.getElementById('insertImgBtn').addEventListener('click', function(){
+    if (confirm('点击「确定」上传本地图片\n点击「取消」输入网络图片网址')){
+      document.getElementById('imgFileInput').click();
+    } else {
+      insertImageFromUrl();
+    }
+  });
+  document.getElementById('imgFileInput').addEventListener('change', function(){
+    if (this.files && this.files[0]) insertImageFromFile(this.files[0]);
+    this.value = '';
+  });
+  /* 粘贴图片自动插入 */
+  document.getElementById('edContent').addEventListener('paste', function(e){
+    var items = e.clipboardData ? e.clipboardData.items : [];
+    for (var i = 0; i < items.length; i++){
+      if (items[i].type.indexOf('image') !== -1){
+        e.preventDefault();
+        insertImageFromFile(items[i].getAsFile());
+        break;
+      }
+    }
   });
   /* 编辑器内待办方框点击勾选 */
   document.getElementById('edContent').addEventListener('click', function(e){
