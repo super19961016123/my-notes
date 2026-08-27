@@ -1451,27 +1451,11 @@ function insertTaskItem(){
 }
 /* ================= 图片插入 ================= */
 function insertImageHtml(src){
+  if (!src || src.length < 10) return;
   var ed = document.getElementById('edContent');
   ed.focus();
-  var sel = window.getSelection();
-  var img = document.createElement('img');
-  img.src = src;
-  img.style.maxWidth = '100%';
-  img.style.height = 'auto';
-  img.style.borderRadius = '6px';
-  img.style.margin = '6px 0';
-  img.style.display = 'block';
-  if (sel.rangeCount){
-    var range = sel.getRangeAt(0);
-    range.deleteContents();
-    range.insertNode(img);
-    range.setStartAfter(img);
-    range.collapse(true);
-    sel.removeAllRanges();
-    sel.addRange(range);
-  } else {
-    ed.appendChild(img);
-  }
+  var html = '<img src="' + src.replace(/"/g,'&quot;') + '" style="max-width:100%;height:auto;border-radius:6px;margin:6px 0;display:block;">';
+  document.execCommand('insertHTML', false, html);
 }
 function compressImage(file, maxWidth, quality, callback){
   var reader = new FileReader();
