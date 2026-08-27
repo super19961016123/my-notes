@@ -1343,10 +1343,28 @@ function execCmd(cmd, val){
 }
 function applyFontSize(size){
   var ed = document.getElementById('edContent');
-  ed.focus();
   var sel = window.getSelection();
-  if (!sel.rangeCount || sel.getRangeAt(0).collapsed) return;
-  var range = sel.getRangeAt(0);
+  var range = null;
+  if (sel.rangeCount) range = sel.getRangeAt(0).cloneRange();
+  ed.focus();
+  if (range){ sel.removeAllRanges(); sel.addRange(range); }
+  if (!sel.rangeCount) return;
+  range = sel.getRangeAt(0);
+
+  // 光标模式（未选中文字）：自动找到包含光标的字号span并选中
+  if (range.collapsed){
+    var node = range.startContainer;
+    if (node.nodeType === 3) node = node.parentNode;
+    var fs = node.closest ? node.closest('span[style*="font-size"]') : null;
+    if (fs){
+      range.selectNodeContents(fs);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } else {
+      document.getElementById('edFontSize').value = '';
+      return;
+    }
+  }
 
   if (!size){
     // 默认：清除字号和行高，保留其他格式
@@ -1371,15 +1389,15 @@ function applyFontSize(size){
     return;
   }
 
-  var span = document.createElement('span');
-  span.style.fontSize = size + 'px';
-  span.style.lineHeight = '1.6';
+  var spanNew = document.createElement('span');
+  spanNew.style.fontSize = size + 'px';
+  spanNew.style.lineHeight = '1.6';
   try {
-    span.appendChild(range.extractContents());
-    range.insertNode(span);
+    spanNew.appendChild(range.extractContents());
+    range.insertNode(spanNew);
     sel.removeAllRanges();
     var r = document.createRange();
-    r.selectNodeContents(span);
+    r.selectNodeContents(spanNew);
     sel.addRange(r);
   } catch(e){}
   document.getElementById('edFontSize').value = '';
