@@ -228,8 +228,8 @@ a:hover{text-decoration:underline}
 .editable-content h2{font-size:18px;font-weight:700;margin:12px 0 6px}
 .editable-content ul{padding-left:20px;margin:6px 0}
 .editable-content blockquote{border-left:3px solid var(--accent);padding-left:12px;color:var(--ink-soft);margin:8px 0}
-.editable-content .task-item,.note-body .task-item{display:flex;align-items:flex-start;gap:8px;margin:5px 0}
-.editable-content .task-item .box,.note-body .task-item .box{width:15px;height:15px;flex:none;margin-top:3px;border:1.5px solid var(--muted);border-radius:4px;cursor:pointer;flex:none;transition:all .12s}
+.editable-content .task-item,.note-body .task-item{display:block;margin:5px 0;line-height:1.8}
+.editable-content .task-item .box,.note-body .task-item .box{display:inline-block;width:14px;height:14px;vertical-align:middle;margin-right:6px;border:1.5px solid var(--muted);border-radius:4px;cursor:pointer;transition:all .12s}
 .editable-content .task-item.done,.note-body .task-item.done{color:var(--muted);text-decoration:line-through}
 .editable-content .task-item.done .box,.note-body .task-item.done .box{background:var(--accent);border-color:var(--accent)}
 .note-body .task-item .box:hover{border-color:var(--accent)}
@@ -1264,7 +1264,7 @@ function applyFontSize(size){
 function insertTaskItem(){
   var ed = document.getElementById('edContent');
   ed.focus();
-  document.execCommand('insertHTML', false, '<div class="task-item"><span class="box"></span>&nbsp;</div>');
+  document.execCommand('insertHTML', false, '<p class="task-item"><span class="box"></span>&nbsp;</p>');
 }
 /* ================= 编辑弹窗 ================= */
 function openEditor(mode, noteId){
