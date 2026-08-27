@@ -1342,12 +1342,35 @@ function execCmd(cmd, val){
   document.execCommand(cmd, false, val || null);
 }
 function applyFontSize(size){
-  if (!size) return;
   var ed = document.getElementById('edContent');
   ed.focus();
   var sel = window.getSelection();
   if (!sel.rangeCount || sel.getRangeAt(0).collapsed) return;
   var range = sel.getRangeAt(0);
+
+  if (!size){
+    // 默认：清除字号和行高，保留其他格式
+    var div = document.createElement('div');
+    div.appendChild(range.extractContents());
+    var spans = div.querySelectorAll('span');
+    for (var i = 0; i < spans.length; i++){
+      var s = spans[i];
+      if (s.style.fontSize) s.style.fontSize = '';
+      if (s.style.lineHeight) s.style.lineHeight = '';
+      if (!s.getAttribute('style')){
+        var p = s.parentNode;
+        while (s.firstChild) p.insertBefore(s.firstChild, s);
+        p.removeChild(s);
+      }
+    }
+    range.insertNode(div);
+    var parent = div.parentNode;
+    while (div.firstChild) parent.insertBefore(div.firstChild, div);
+    parent.removeChild(div);
+    document.getElementById('edFontSize').value = '';
+    return;
+  }
+
   var span = document.createElement('span');
   span.style.fontSize = size + 'px';
   span.style.lineHeight = '1.6';
