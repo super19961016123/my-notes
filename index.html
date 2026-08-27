@@ -1455,29 +1455,54 @@ function insertImageHtml(src){
   ed.focus();
   document.execCommand('insertHTML', false, '<img src="' + src.replace(/"/g,'&quot;') + '" style="max-width:100%;height:auto;border-radius:6px;margin:6px 0;display:block;">');
 }
+function compressImage(file, maxWidth, quality, callback){
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var img = new Image();
+    img.onload = function(){
+      var canvas = document.createElement('canvas');
+      var w = img.width, h = img.height;
+      if (w > maxWidth){ h = h * (maxWidth / w); w = maxWidth; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      callback(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
 function insertImageFromFile(file){
   if (!file || !file.type || !file.type.startsWith('image/')) return;
-  if (file.size > 3 * 1024 * 1024){
-    if (!confirm('图片超过 3MB，插入后会占用较多存储空间，确定继续吗？')) return;
+  if (file.size > 500 * 1024){
+    // 超过500KB自动压缩：最大宽度1200px，质量80%
+    compressImage(file, 1200, 0.8, function(dataUrl){
+      insertImageHtml(dataUrl);
+    });
+  } else {
+    var reader = new FileReader();
+    reader.onload = function(e){ insertImageHtml(e.target.result); };
+    reader.readAsDataURL(file);
   }
-  var reader = new FileReader();
-  reader.onload = function(e){ insertImageHtml(e.target.result); };
-  reader.readAsDataURL(file);
 }
 function insertMultipleImages(files){
   var arr = [];
-  var loaded = 0;
+  var done = 0;
   for (var i = 0; i < files.length; i++){
     (function(idx){
-      var reader = new FileReader();
-      reader.onload = function(e){
-        arr[idx] = e.target.result;
-        loaded++;
-        if (loaded === files.length){
-          for (var j = 0; j < arr.length; j++) insertImageHtml(arr[j]);
-        }
-      };
-      reader.readAsDataURL(files[idx]);
+      var file = files[idx];
+      if (file.size > 500 * 1024){
+        compressImage(file, 1200, 0.8, function(dataUrl){
+          arr[idx] = dataUrl; done++;
+          if (done === files.length){ for (var j = 0; j < arr.length; j++) insertImageHtml(arr[j]); }
+        });
+      } else {
+        var reader = new FileReader();
+        reader.onload = function(e){
+          arr[idx] = e.target.result; done++;
+          if (done === files.length){ for (var j = 0; j < arr.length; j++) insertImageHtml(arr[j]); }
+        };
+        reader.readAsDataURL(file);
+      }
     })(i);
   }
 }
