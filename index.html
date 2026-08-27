@@ -646,7 +646,7 @@ body.drawer-open .scrim{display:block}
           <button type="button" id="edClearFmt" title="清除选中文字的格式">清除格式</button>
         </div>
         <div id="edContent" contenteditable="true" class="editable-content" placeholder="开始写…"></div>
-        <input type="file" id="imgFileInput" accept="image/*" style="display:none">
+        <input type="file" id="imgFileInput" accept="image/*" multiple style="display:none">
       </div>
     </div>
     <div class="modal-foot">
@@ -1464,6 +1464,23 @@ function insertImageFromFile(file){
   reader.onload = function(e){ insertImageHtml(e.target.result); };
   reader.readAsDataURL(file);
 }
+function insertMultipleImages(files){
+  var arr = [];
+  var loaded = 0;
+  for (var i = 0; i < files.length; i++){
+    (function(idx){
+      var reader = new FileReader();
+      reader.onload = function(e){
+        arr[idx] = e.target.result;
+        loaded++;
+        if (loaded === files.length){
+          for (var j = 0; j < arr.length; j++) insertImageHtml(arr[j]);
+        }
+      };
+      reader.readAsDataURL(files[idx]);
+    })(i);
+  }
+}
 function insertImageFromUrl(){
   var url = prompt('请输入图片网址（http:// 或 https:// 开头）：');
   if (url && /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?.*)?$/i.test(url.trim())){
@@ -2037,14 +2054,14 @@ function bind(){
   /* 图片插入 */
   document.getElementById('insertImgBtn').addEventListener('mousedown', function(e){ e.preventDefault(); });
   document.getElementById('insertImgBtn').addEventListener('click', function(){
-    if (confirm('点击「确定」上传本地图片\n点击「取消」输入网络图片网址')){
+    if (confirm('点击「确定」上传本地图片（可一次选多张）\n点击「取消」输入网络图片网址')){
       document.getElementById('imgFileInput').click();
     } else {
       insertImageFromUrl();
     }
   });
   document.getElementById('imgFileInput').addEventListener('change', function(){
-    if (this.files && this.files[0]) insertImageFromFile(this.files[0]);
+    if (this.files && this.files.length > 0) insertMultipleImages(this.files);
     this.value = '';
   });
   /* 粘贴图片自动插入 */
