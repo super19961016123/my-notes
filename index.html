@@ -1075,6 +1075,18 @@ function updateStorageInfo(){
     var total = 5 * 1024 * 1024;
     var percent = Math.min(100, (used / total) * 100);
     var usedMB = (used / 1024 / 1024).toFixed(2);
+    var savedText = '';
+    if (raw){
+      try {
+        var decompressed = LZString.decompressFromUTF16(raw);
+        if (decompressed){
+          var originalSize = new Blob([decompressed]).size;
+          var saved = originalSize - used;
+          if (saved > 1024) savedText = '，省 ' + (saved / 1024).toFixed(1) + ' KB';
+          else if (saved > 0) savedText = '，省 ' + saved + ' B';
+        }
+      } catch(e){}
+    }
     var fill = document.getElementById('storageFill');
     var text = document.getElementById('storageText');
     if (fill){
@@ -1083,7 +1095,7 @@ function updateStorageInfo(){
       if (percent >= 90) fill.classList.add('danger');
       else if (percent >= 70) fill.classList.add('warning');
     }
-    if (text) text.textContent = '已用 ' + usedMB + ' MB / 5 MB（已压缩）';
+    if (text) text.textContent = '已用 ' + usedMB + ' MB / 5 MB（已压缩' + savedText + '）';
   } catch(e){}
 }
 function persist(){
