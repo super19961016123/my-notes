@@ -243,6 +243,24 @@ a:hover{text-decoration:underline}
   border-top:1px solid var(--line);
   display:flex;flex-direction:column;gap:6px;
 }
+.storage-info{
+  padding:10px 14px 4px;
+  border-top:1px solid var(--line);
+  margin-top:4px;
+}
+.storage-bar{
+  height:6px;background:var(--surface-2);
+  border-radius:3px;overflow:hidden;margin-bottom:6px;
+}
+.storage-fill{
+  height:100%;background:var(--primary);
+  border-radius:3px;transition:width .3s;
+}
+.storage-fill.warning{background:#f59e0b}
+.storage-fill.danger{background:#ef4444}
+.storage-text{
+  font-size:11px;color:var(--muted);text-align:center;
+}
 .tool-btn{
   display:flex;align-items:center;gap:8px;
   padding:8px 10px;border-radius:9px;
@@ -577,6 +595,10 @@ body.drawer-open .scrim{display:block}
       </button>
       <input type="file" id="importFile" accept=".json,application/json" hidden>
     </div>
+    <div class="storage-info" id="storageInfo">
+      <div class="storage-bar"><div class="storage-fill" id="storageFill"></div></div>
+      <div class="storage-text" id="storageText">已用 0 MB / 5 MB</div>
+    </div>
     <div class="sync-status off" id="syncStatus" hidden><span class="dot"></span><span id="syncStatusText">云同步</span></div>
     <button class="tool-btn" id="syncBtn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17.5 9.5 4.5 4.5 0 0 1 17 18H7Z"/><path d="m9 14 3-3 3 3M12 11v6"/></svg>
@@ -836,13 +858,31 @@ function normalizeData(d){
 var userData = loadUserData();
 var current = normalizeData(userData ? userData : cloneData(DEFAULT_DATA));
 
+function updateStorageInfo(){
+  try {
+    var used = new Blob([JSON.stringify(current)]).size;
+    var total = 5 * 1024 * 1024;
+    var percent = Math.min(100, (used / total) * 100);
+    var usedMB = (used / 1024 / 1024).toFixed(2);
+    var fill = document.getElementById('storageFill');
+    var text = document.getElementById('storageText');
+    if (fill){
+      fill.style.width = percent + '%';
+      fill.classList.remove('warning', 'danger');
+      if (percent >= 90) fill.classList.add('danger');
+      else if (percent >= 70) fill.classList.add('warning');
+    }
+    if (text) text.textContent = '已用 ' + usedMB + ' MB / 5 MB';
+  } catch(e){}
+}
 function persist(){
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+    updateStorageInfo();
     return true;
   } catch(e){
     if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || (e.message && e.message.indexOf('quota') >= 0)){
-      showToast('保存失败：存储空间不足！请删除一些笔记或图片后再试');
+      showToast('保存失败：存储空间不足！请删除一些笔记后再试');
     } else {
       showToast('保存失败：浏览器存储不可用');
     }
@@ -2095,6 +2135,7 @@ function bind(){
     if (saved) document.documentElement.setAttribute('data-theme', saved);
   } catch(e){}
   renderSidebar();
+  updateStorageInfo();
   handleHash();
   bind();
   if (sync){
