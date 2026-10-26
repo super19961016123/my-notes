@@ -362,6 +362,8 @@ a:hover{text-decoration:underline}
 .ni-meta{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
 .ni-date{font-size:11px;color:var(--muted);display:inline-flex;align-items:center;gap:4px}
 .ni-date svg{width:12px;height:12px}
+.ni-cat{font-size:11px;color:var(--accent);background:var(--accent-soft);padding:1px 7px;border-radius:8px;display:inline-flex;align-items:center;gap:3px}
+.ni-cat svg{width:11px;height:11px}
 .ni-tags{display:inline-flex;gap:5px;flex-wrap:wrap}
 .tag{
   font-size:10.5px;color:var(--accent);background:var(--accent-soft);
@@ -1487,6 +1489,7 @@ function renderList(){
       '<div class="ni-excerpt">' + escapeHtml(excerpt(x.note.content, 64)) + '</div>' +
       '<div class="ni-meta">' +
         '<span class="ni-date">' + ICONS.calendar + escapeHtml(x.note.date) + '</span>' +
+        (state.cat === 'all' ? '<span class="ni-cat">' + ICONS.folder + escapeHtml(x.cat.name) + '</span>' : '') +
         '<span class="ni-tags">' + x.note.tags.slice(0,3).map(function(t){ return '<span class="tag">' + escapeHtml(t) + '</span>'; }).join('') + '</span>' +
       '</div></button>';
   });
