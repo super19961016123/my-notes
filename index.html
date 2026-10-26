@@ -1371,6 +1371,14 @@ function catDepth(id){
   while (c && c.parent){ d++; c = findCat(c.parent); }
   return d;
 }
+function catPathName(cat){
+  if (!cat) return '';
+  if (cat.parent){
+    var p = findCat(cat.parent);
+    if (p) return p.name + ' / ' + cat.name;
+  }
+  return cat.name;
+}
 function catNoteCount(id){
   var c = findCat(id);
   return c && Array.isArray(c.notes) ? c.notes.length : 0;
@@ -1489,7 +1497,7 @@ function renderList(){
       '<div class="ni-excerpt">' + escapeHtml(excerpt(x.note.content, 64)) + '</div>' +
       '<div class="ni-meta">' +
         '<span class="ni-date">' + ICONS.calendar + escapeHtml(x.note.date) + '</span>' +
-        (state.cat === 'all' ? '<span class="ni-cat">' + ICONS.folder + escapeHtml(x.cat.name) + '</span>' : '') +
+        (state.cat === 'all' ? '<span class="ni-cat">' + ICONS.folder + escapeHtml(catPathName(x.cat)) + '</span>' : '') +
         '<span class="ni-tags">' + x.note.tags.slice(0,3).map(function(t){ return '<span class="tag">' + escapeHtml(t) + '</span>'; }).join('') + '</span>' +
       '</div></button>';
   });
