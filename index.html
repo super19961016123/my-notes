@@ -1313,9 +1313,8 @@ function catDepth(id){
   return d;
 }
 function catNoteCount(id){
-  var ids = descendantIds(id), n = 0;
-  current.categories.forEach(function(c){ if (ids.indexOf(c.id) !== -1) n += c.notes.length; });
-  return n;
+  var c = findCat(id);
+  return c && Array.isArray(c.notes) ? c.notes.length : 0;
 }
 /* ================= 渲染：侧栏 ================= */
 function renderSidebar(){
@@ -1370,8 +1369,7 @@ function catButton(id, icon, name, count, depth, hasKids, collapsed){
 function visibleNotes(){
   var list = allNotes();
   if (state.cat !== 'all'){
-    var ids = descendantIds(state.cat);
-    list = list.filter(function(x){ return ids.indexOf(x.cat.id) !== -1; });
+    list = list.filter(function(x){ return x.cat.id === state.cat; });
   }
   if (state.tag) list = list.filter(function(x){ return x.note.tags.indexOf(state.tag) !== -1; });
   if (state.query){
