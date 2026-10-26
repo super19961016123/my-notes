@@ -214,7 +214,33 @@ a:hover{text-decoration:underline}
 .ed-toolbar button:hover{background:var(--surface);border-color:var(--line)}
 .ed-toolbar select{height:26px;padding:0 5px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:12px}
 .ed-toolbar input[type=color]{width:26px;height:26px;padding:0;border:1px solid var(--line);border-radius:6px;background:transparent;cursor:pointer;flex:none}
-#edContent{border-radius:0 0 9px 9px;border-top:none;min-height:200px}
+#edContent{border-radius:0 0 9px 9px;border-top:none;min-height:200px;position:relative}
+.float-bar{
+  position:absolute;z-index:30;display:flex;align-items:center;gap:4px;
+  padding:5px 8px;background:var(--ink);color:var(--bg);
+  border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.3);
+  font-size:12px;white-space:nowrap;
+}
+.float-bar[hidden]{display:none}
+.float-bar button{
+  min-width:24px;height:24px;padding:0 5px;border-radius:5px;
+  background:transparent;color:var(--bg);border:none;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;font-size:12px;
+}
+.float-bar button:hover{background:rgba(255,255,255,.18)}
+.float-bar select{
+  height:24px;border:none;border-radius:5px;background:rgba(255,255,255,.15);
+  color:var(--bg);font-size:11px;padding:0 4px;cursor:pointer;
+}
+.float-bar select option{color:#222}
+.float-bar .fb-sep{width:1px;height:18px;background:rgba(255,255,255,.25);margin:0 3px;flex:none}
+.float-bar .fb-colors{display:flex;align-items:center;gap:3px}
+.float-bar .fb-colors .sw{
+  width:16px;height:16px;border-radius:4px;padding:0;border:1px solid rgba(255,255,255,.35);
+}
+.float-bar input[type=color]{
+  width:20px;height:20px;padding:0;border:none;border-radius:4px;background:transparent;cursor:pointer;
+}
 .editable-content{
   min-height:200px;max-height:55vh;overflow-y:auto;
   padding:12px 14px;
@@ -651,21 +677,53 @@ body.drawer-open .scrim{display:block}
           <button type="button" data-cmd="list" title="无序列表">• 列表</button>
           <button type="button" data-cmd="task" title="待办清单">☑ 待办</button>
           <span class="tb-sep"></span>
-          <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)">字号
-            <select id="edFontSize">
-              <option value="">默认</option>
+          <span style="font-size:11px;color:var(--muted)">选中文字可弹出格式工具栏</span>
+        </div>
+        <div style="position:relative">
+          <div id="edContent" contenteditable="true" class="editable-content" placeholder="开始写…"></div>
+          <div id="floatBar" class="float-bar" hidden>
+            <button type="button" data-fcmd="bold" title="加粗"><b>B</b></button>
+            <button type="button" data-fcmd="italic" title="斜体"><i>I</i></button>
+            <span class="fb-sep"></span>
+            <select id="fbFontSize" title="字号">
+              <option value="">字号</option>
               <option value="13">小</option>
               <option value="16">中</option>
               <option value="19">大</option>
               <option value="24">特大</option>
             </select>
-          </label>
-          <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)">颜色
-            <input type="color" id="edFontColor" value="#1a1a1a">
-          </label>
-          <button type="button" id="edClearFmt" title="清除选中文字的格式">清除格式</button>
+            <select id="fbFontFamily" title="字体">
+              <option value="">字体</option>
+              <option value="var(--font-body)">默认</option>
+              <option value="SimSun, serif">宋体</option>
+              <option value="SimHei, sans-serif">黑体</option>
+              <option value="KaiTi, serif">楷体</option>
+              <option value="Microsoft YaHei, sans-serif">雅黑</option>
+              <option value="ui-monospace, Consolas, monospace">等宽</option>
+            </select>
+            <span class="fb-sep"></span>
+            <div class="fb-colors" title="文字颜色">
+              <button type="button" class="sw" data-tcolor="#1a1a1a" style="background:#1a1a1a"></button>
+              <button type="button" class="sw" data-tcolor="#e11d48" style="background:#e11d48"></button>
+              <button type="button" class="sw" data-tcolor="#d97706" style="background:#d97706"></button>
+              <button type="button" class="sw" data-tcolor="#16a34a" style="background:#16a34a"></button>
+              <button type="button" class="sw" data-tcolor="#2563eb" style="background:#2563eb"></button>
+              <button type="button" class="sw" data-tcolor="#7c3aed" style="background:#7c3aed"></button>
+              <input type="color" id="fbTextColor" value="#1a1a1a" title="自定义文字颜色">
+            </div>
+            <span class="fb-sep"></span>
+            <div class="fb-colors" title="高亮背景">
+              <button type="button" class="sw" data-hl="transparent" style="background:#fff;border:1px solid #888" title="无高亮"></button>
+              <button type="button" class="sw" data-hl="#fef08a" style="background:#fef08a"></button>
+              <button type="button" class="sw" data-hl="#bbf7d0" style="background:#bbf7d0"></button>
+              <button type="button" class="sw" data-hl="#bfdbfe" style="background:#bfdbfe"></button>
+              <button type="button" class="sw" data-hl="#fecaca" style="background:#fecaca"></button>
+              <button type="button" class="sw" data-hl="#e9d5ff" style="background:#e9d5ff"></button>
+            </div>
+            <span class="fb-sep"></span>
+            <button type="button" id="fbClear" title="清除选中格式">✕</button>
+          </div>
         </div>
-        <div id="edContent" contenteditable="true" class="editable-content" placeholder="开始写…"></div>
       </div>
     </div>
     <div class="modal-foot">
@@ -1634,7 +1692,7 @@ function applyFontSize(size){
         p.removeChild(fsSpan);
       }
     }
-    document.getElementById('edFontSize').value = '';
+    var fb = document.getElementById('fbFontSize'); if (fb) fb.value = '';
     return;
   }
 
@@ -1668,7 +1726,7 @@ function applyFontSize(size){
       sel.addRange(r2);
     } catch(e){}
   }
-  document.getElementById('edFontSize').value = '';
+  var fb = document.getElementById('fbFontSize'); if (fb) fb.value = '';
 }
 function insertTaskItem(){
   var ed = document.getElementById('edContent');
@@ -2267,17 +2325,85 @@ function bind(){
       else if (cmd === 'task') insertTaskItem();
     });
   });
-  document.getElementById('edFontSize').addEventListener('change', function(){ applyFontSize(this.value); });
-  document.getElementById('edFontColor').addEventListener('input', function(){
-    document.getElementById('edContent').focus();
+
+  /* ===== 浮动格式工具栏：选中文字后自动弹出 ===== */
+  var floatBar = document.getElementById('floatBar');
+  var edContent = document.getElementById('edContent');
+  function hideFloatBar(){ floatBar.hidden = true; }
+  function showFloatBar(){
+    var sel = window.getSelection();
+    if (!sel.rangeCount || sel.isCollapsed){ floatBar.hidden = true; return; }
+    var range = sel.getRangeAt(0);
+    var node = range.commonAncestorContainer;
+    if (node !== edContent && !edContent.contains(node)){ floatBar.hidden = true; return; }
+    var rect = range.getBoundingClientRect();
+    var wrap = floatBar.parentElement;
+    var wrapRect = wrap.getBoundingClientRect();
+    var barW = floatBar.offsetWidth || 280;
+    var left = rect.left - wrapRect.left + wrap.scrollLeft - barW/2 + rect.width/2;
+    var top = rect.top - wrapRect.top + wrap.scrollTop - floatBar.offsetHeight - 8;
+    if (left < 0) left = 0;
+    if (left + barW > wrap.clientWidth) left = wrap.clientWidth - barW;
+    if (top < 0) top = rect.bottom - wrapRect.top + wrap.scrollTop + 8;
+    floatBar.style.left = left + 'px';
+    floatBar.style.top = top + 'px';
+    floatBar.hidden = false;
+  }
+  edContent.addEventListener('mouseup', function(){ setTimeout(showFloatBar, 10); });
+  edContent.addEventListener('keyup', function(e){
+    if (['Shift','Control','Meta','Alt','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].indexOf(e.key) === -1){
+      setTimeout(showFloatBar, 10);
+    }
+  });
+  document.addEventListener('mousedown', function(e){
+    if (!floatBar.contains(e.target) && e.target !== edContent && !edContent.contains(e.target)) hideFloatBar();
+  });
+  /* 浮窗按钮 mousedown 阻止默认，保留选区 */
+  floatBar.querySelectorAll('button,select,input').forEach(function(el){
+    el.addEventListener('mousedown', function(e){ e.preventDefault(); });
+  });
+  floatBar.querySelector('[data-fcmd="bold"]').addEventListener('click', function(){ edContent.focus(); document.execCommand('bold'); });
+  floatBar.querySelector('[data-fcmd="italic"]').addEventListener('click', function(){ edContent.focus(); document.execCommand('italic'); });
+  document.getElementById('fbFontSize').addEventListener('change', function(){
+    if (this.value){ applyFontSize(this.value); this.value = ''; }
+  });
+  document.getElementById('fbFontFamily').addEventListener('change', function(){
+    if (this.value){
+      edContent.focus();
+      document.execCommand('styleWithCSS', false, true);
+      document.execCommand('fontName', false, this.value);
+      this.value = '';
+    }
+  });
+  floatBar.querySelectorAll('[data-tcolor]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      edContent.focus();
+      document.execCommand('styleWithCSS', false, true);
+      document.execCommand('foreColor', false, this.getAttribute('data-tcolor'));
+    });
+  });
+  document.getElementById('fbTextColor').addEventListener('input', function(){
+    edContent.focus();
     document.execCommand('styleWithCSS', false, true);
     document.execCommand('foreColor', false, this.value);
   });
-  document.getElementById('edClearFmt').addEventListener('mousedown', function(e){ e.preventDefault(); });
-  document.getElementById('edClearFmt').addEventListener('click', function(){
-    document.getElementById('edContent').focus();
+  floatBar.querySelectorAll('[data-hl]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      edContent.focus();
+      document.execCommand('styleWithCSS', false, true);
+      var c = this.getAttribute('data-hl');
+      if (c === 'transparent') c = 'rgba(0,0,0,0)';
+      document.execCommand('hiliteColor', false, c);
+      document.execCommand('backColor', false, c);
+    });
+  });
+  document.getElementById('fbClear').addEventListener('click', function(){
+    edContent.focus();
     document.execCommand('removeFormat');
   });
+  /* 编辑器打开时隐藏浮窗 */
+  document.getElementById('edCancel').addEventListener('click', hideFloatBar);
+  document.getElementById('edSave').addEventListener('click', hideFloatBar);
   /* 编辑器内待办方框点击勾选 */
   document.getElementById('edContent').addEventListener('click', function(e){
     var box = e.target.closest('.task-item .box');
