@@ -1498,7 +1498,10 @@ function renderList(){
       '<div class="ni-meta">' +
         '<span class="ni-date">' + ICONS.calendar + escapeHtml(x.note.date) + '</span>' +
         (state.cat === 'all' ? '<span class="ni-cat">' + ICONS.folder + escapeHtml(catPathName(x.cat)) + '</span>' : '') +
-        '<span class="ni-tags">' + x.note.tags.slice(0,3).map(function(t){ return '<span class="tag">' + escapeHtml(t) + '</span>'; }).join('') + '</span>' +
+        '<span class="ni-tags">' + x.note.tags.filter(function(t){
+            var p = x.cat.parent ? (findCat(x.cat.parent) ? findCat(x.cat.parent).name : '') : '';
+            return t !== x.cat.name && t !== p;
+          }).slice(0,3).map(function(t){ return '<span class="tag">' + escapeHtml(t) + '</span>'; }).join('') + '</span>' +
       '</div></button>';
   });
   scroll.innerHTML = html;
