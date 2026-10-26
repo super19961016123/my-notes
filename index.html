@@ -1501,7 +1501,7 @@ function renderList(){
       '<div class="ni-excerpt">' + escapeHtml(excerpt(x.note.content, 64)) + '</div>' +
       '<div class="ni-meta">' +
         '<span class="ni-date">' + ICONS.calendar + escapeHtml(x.note.date) + '</span>' +
-        (state.cat === 'all' ? '<span class="ni-cat">' + ICONS.folder + escapeHtml(catPathName(x.cat)) + '</span>' : '') +
+        '<span class="ni-cat">' + ICONS.folder + escapeHtml(catPathName(x.cat)) + '</span>' +
         '<span class="ni-tags">' + x.note.tags.filter(function(t){
             var p = x.cat.parent ? (findCat(x.cat.parent) ? findCat(x.cat.parent).name : '') : '';
             return t !== x.cat.name && t !== p;
