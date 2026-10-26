@@ -2347,13 +2347,31 @@ function bind(){
   /* ===== 浮动格式工具栏：选中文字后自动弹出 ===== */
   var floatBar = document.getElementById('floatBar');
   var edContent = document.getElementById('edContent');
-  function hideFloatBar(){ floatBar.hidden = true; }
+  var savedRange = null;
+  function hideFloatBar(){ floatBar.hidden = true; savedRange = null; }
+  function saveRange(){
+    var sel = window.getSelection();
+    if (sel.rangeCount && !sel.isCollapsed){
+      var r = sel.getRangeAt(0);
+      var node = r.commonAncestorContainer;
+      if (node === edContent || edContent.contains(node)) savedRange = r.cloneRange();
+    }
+  }
+  function restoreRange(){
+    if (!savedRange) return false;
+    edContent.focus();
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(savedRange);
+    return true;
+  }
   function showFloatBar(){
     var sel = window.getSelection();
-    if (!sel.rangeCount || sel.isCollapsed){ floatBar.hidden = true; return; }
+    if (!sel.rangeCount || sel.isCollapsed){ floatBar.hidden = true; savedRange = null; return; }
     var range = sel.getRangeAt(0);
     var node = range.commonAncestorContainer;
-    if (node !== edContent && !edContent.contains(node)){ floatBar.hidden = true; return; }
+    if (node !== edContent && !edContent.contains(node)){ floatBar.hidden = true; savedRange = null; return; }
+    savedRange = range.cloneRange();
     var rect = range.getBoundingClientRect();
     var wrap = floatBar.parentElement;
     var wrapRect = wrap.getBoundingClientRect();
@@ -2376,17 +2394,51 @@ function bind(){
   document.addEventListener('mousedown', function(e){
     if (!floatBar.contains(e.target) && e.target !== edContent && !edContent.contains(e.target)) hideFloatBar();
   });
-  /* 浮窗按钮 mousedown 阻止默认，保留选区 */
+  /* 浮窗按钮 mousedown 阻止默认，保留编辑器选区 */
   floatBar.querySelectorAll('button,select,input').forEach(function(el){
     el.addEventListener('mousedown', function(e){ e.preventDefault(); });
   });
-  floatBar.querySelector('[data-fcmd="bold"]').addEventListener('click', function(){ edContent.focus(); document.execCommand('bold'); });
-  floatBar.querySelector('[data-fcmd="italic"]').addEventListener('click', function(){ edContent.focus(); document.execCommand('italic'); });
-  /* 字号：输入数字后回车或失焦应用 */
+  function wrapSpan(cssProp, cssVal){
+    if (!restoreRange()) return;
+    var sel = window.getSelection();
+    if (!sel.rangeCount || sel.isCollapsed) return;
+    var range = sel.getRangeAt(0);
+    var span = document.createElement('span');
+    span.style[cssProp] = cssVal;
+    try {
+      span.appendChild(range.extractContents());
+      range.insertNode(span);
+      sel.removeAllRanges();
+      var r = document.createRange();
+      r.selectNodeContents(span);
+      sel.addRange(r);
+      savedRange = r.cloneRange();
+    } catch(e){}
+  }
+  floatBar.querySelector('[data-fcmd="bold"]').addEventListener('click', function(){ restoreRange(); document.execCommand('bold'); });
+  floatBar.querySelector('[data-fcmd="italic"]').addEventListener('click', function(){ restoreRange(); document.execCommand('italic'); });
+  /* 字号：输入数字后回车应用 */
   var fbSize = document.getElementById('fbFontSize');
   function applyFbSize(){
     var v = parseInt(fbSize.value, 10);
-    if (v >= 8 && v <= 72){ applyFontSize(String(v)); }
+    if (v >= 8 && v <= 72){
+      if (!restoreRange()) return;
+      var sel = window.getSelection();
+      if (!sel.rangeCount || sel.isCollapsed){ fbSize.value=''; return; }
+      var range = sel.getRangeAt(0);
+      var span = document.createElement('span');
+      span.style.fontSize = v + 'px';
+      span.style.lineHeight = '1.6';
+      try {
+        span.appendChild(range.extractContents());
+        range.insertNode(span);
+        sel.removeAllRanges();
+        var r = document.createRange();
+        r.selectNodeContents(span);
+        sel.addRange(r);
+        savedRange = r.cloneRange();
+      } catch(e){}
+    }
     fbSize.value = '';
   }
   fbSize.addEventListener('change', applyFbSize);
@@ -2395,55 +2447,21 @@ function bind(){
   document.getElementById('fbFontFamily').addEventListener('change', function(){
     var v = this.value;
     if (!v) return;
-    edContent.focus();
-    var sel = window.getSelection();
-    if (!sel.rangeCount || sel.isCollapsed) return;
-    var range = sel.getRangeAt(0);
-    var span = document.createElement('span');
-    span.style.fontFamily = v;
-    try {
-      span.appendChild(range.extractContents());
-      range.insertNode(span);
-      sel.removeAllRanges();
-      var r = document.createRange();
-      r.selectNodeContents(span);
-      sel.addRange(r);
-    } catch(e){}
+    wrapSpan('fontFamily', v);
     this.value = '';
   });
   floatBar.querySelectorAll('[data-tcolor]').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      edContent.focus();
-      document.execCommand('styleWithCSS', false, true);
-      document.execCommand('foreColor', false, this.getAttribute('data-tcolor'));
-    });
+    btn.addEventListener('click', function(){ wrapSpan('color', this.getAttribute('data-tcolor')); });
   });
-  document.getElementById('fbTextColor').addEventListener('input', function(){
-    edContent.focus();
-    document.execCommand('styleWithCSS', false, true);
-    document.execCommand('foreColor', false, this.value);
-  });
+  document.getElementById('fbTextColor').addEventListener('input', function(){ wrapSpan('color', this.value); });
   floatBar.querySelectorAll('[data-hl]').forEach(function(btn){
     btn.addEventListener('click', function(){
-      edContent.focus();
-      var sel = window.getSelection();
-      if (!sel.rangeCount || sel.isCollapsed) return;
-      var range = sel.getRangeAt(0);
       var c = this.getAttribute('data-hl');
-      var span = document.createElement('span');
-      span.style.backgroundColor = (c === 'transparent') ? 'transparent' : c;
-      try {
-        span.appendChild(range.extractContents());
-        range.insertNode(span);
-        sel.removeAllRanges();
-        var r = document.createRange();
-        r.selectNodeContents(span);
-        sel.addRange(r);
-      } catch(e){}
+      wrapSpan('backgroundColor', (c === 'transparent') ? 'transparent' : c);
     });
   });
   document.getElementById('fbClear').addEventListener('click', function(){
-    edContent.focus();
+    restoreRange();
     document.execCommand('removeFormat');
   });
   /* 编辑器打开时隐藏浮窗 */
