@@ -2395,7 +2395,8 @@ function bind(){
     if (!floatBar.contains(e.target) && e.target !== edContent && !edContent.contains(e.target)) hideFloatBar();
   });
   /* 浮窗按钮 mousedown 阻止默认，保留编辑器选区 */
-  floatBar.querySelectorAll('button,select,input').forEach(function(el){
+  /* 按钮 mousedown 阻止默认保留选区；input/select 不阻止，让它们能获得焦点 */
+  floatBar.querySelectorAll('button').forEach(function(el){
     el.addEventListener('mousedown', function(e){ e.preventDefault(); });
   });
   function wrapSpan(cssProp, cssVal){
