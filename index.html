@@ -1612,12 +1612,24 @@ function renderNote(){
       } else {
         var item = this.closest('.task-item');
         if (item){
+          var wasDone = item.classList.contains('done');
           item.classList.toggle('done');
+          if (!wasDone) settleDoneToBottom(document.querySelector('.note-body'), item);
           saveNoteBody(state.note);
         }
       }
     });
   });
+}
+function settleDoneToBottom(container, item){
+  if (!container || !item || !item.classList.contains('done')) return;
+  var tasks = container.querySelectorAll('.task-item');
+  if (!tasks.length) return;
+  var last = tasks[tasks.length - 1];
+  if (last === item) return;
+  // 插到最后一个待办项之后（普通段落位置保持不变）
+  if (last.nextSibling){ container.insertBefore(item, last.nextSibling); }
+  else { container.appendChild(item); }
 }
 function saveNoteBody(noteId){
   var f = findNote(noteId);
@@ -2473,8 +2485,12 @@ function bind(){
     var box = e.target.closest('.task-item .box');
     if (box){
       var item = box.closest('.task-item');
-      if (item) item.classList.toggle('done');
-      e.preventDefault();
+      if (item){
+        var wasDone = item.classList.contains('done');
+        item.classList.toggle('done');
+        if (!wasDone) settleDoneToBottom(document.getElementById('edContent'), item);
+        e.preventDefault();
+      }
     }
   });
 
