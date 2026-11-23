@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>我的笔记 · 个人知识库</title>
-<meta name="description" content="个人笔记网站：分类整理、全文搜索、全端阅读。由豆包维护，托管于 GitHub Pages。">
+<meta name="description" content="个人笔记网站：分类整理、全局搜索、本地保存与 GitHub 加密云同步。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='4' y='3' width='16' height='18' rx='2' fill='%232f6b5a'/%3E%3Cpath d='M9 3v18' stroke='%23fffefb' stroke-width='1.5'/%3E%3Cpath d='M12 7h4M12 10.5h4M12 14h2.5' stroke='%23fffefb' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@600;700;900&family=Noto+Sans+SC:wght@400;500;700&display=swap">
 <style>
@@ -84,7 +84,7 @@ a:hover{text-decoration:underline}
 }
 .brand-sub{color:var(--muted);font-size:12px;font-weight:400;font-family:var(--font-body);margin-left:2px}
 .searchbox{
-  flex:1;max-width:520px;margin:0 auto;
+  flex:1;min-width:0;max-width:520px;margin:0 auto;
   display:flex;align-items:center;gap:8px;
   background:var(--surface);
   border:1px solid var(--line);
@@ -95,7 +95,7 @@ a:hover{text-decoration:underline}
 .searchbox:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 .searchbox svg{width:16px;height:16px;color:var(--muted);flex:none}
 .searchbox input{
-  flex:1;border:none;outline:none;background:transparent;color:var(--ink);font-size:14px;
+  flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--ink);font-size:14px;
 }
 .searchbox input::placeholder{color:var(--muted)}
 .icon-btn{
@@ -355,8 +355,8 @@ a:hover{text-decoration:underline}
 .note-item:hover{background:var(--surface);border-color:var(--line)}
 .note-item.active{background:var(--surface);border-color:var(--accent);box-shadow:var(--shadow)}
 .ni-title{font-size:14.5px;font-weight:700;color:var(--ink);line-height:1.45;text-wrap:pretty}
-.ni-title.has-tasks{color:#d32f2f}
-.note-title.has-tasks{color:#d32f2f}
+.ni-title.has-tasks{color:var(--danger)}
+.note-title.has-tasks{color:var(--danger)}
 /* 待办汇总 */
 .task-summary-item{display:flex;align-items:flex-start;gap:10px;text-align:left}
 .task-summary-box{display:inline-block;width:16px;height:16px;flex:none;margin-top:2px;border:1.5px solid var(--muted);border-radius:4px;cursor:pointer;transition:all .12s;user-select:none}
@@ -406,8 +406,9 @@ a:hover{text-decoration:underline}
   font-size:11.5px;color:var(--muted);display:inline-flex;align-items:center;gap:5px;
 }
 .note-meta .date-chip svg{width:13px;height:13px}
+.note-actions{display:flex;align-items:center;gap:4px;margin-left:auto;flex:none}
+.note-actions .move-btn{margin-left:0}
 .edit-note-btn{
-  margin-left:auto;
   display:inline-flex;align-items:center;gap:6px;
   font-size:12.5px;color:var(--muted);
   border:1px solid var(--line);border-radius:8px;padding:5px 11px;
@@ -579,10 +580,24 @@ body.drawer-open .scrim{display:block}
   .back-btn{display:inline-flex}
   .content-wrap{padding:18px 20px 80px}
   .brand-sub{display:none}
-  .searchbox{max-width:none}
+  .searchbox{max-width:none;min-height:44px}
   .primary-btn span.lbl{display:none}
-  .primary-btn{padding:8px 10px}
+  .primary-btn{min-width:44px;min-height:44px;padding:8px 10px;justify-content:center}
+  .icon-btn{width:44px;height:44px}
+  .ghost-btn,.danger-btn,.tool-btn,.back-btn,.edit-note-btn{min-height:44px}
+  .move-btn{width:44px;height:44px}
+  .ed-toolbar button{min-width:44px;height:44px}
   .field-row{grid-template-columns:1fr}
+  #editorMask{padding:0}
+  #editorMask .modal{width:100%;max-width:none;height:100vh;height:100dvh;max-height:none;border:0;border-radius:0}
+  #editorMask .modal-body{flex:1;min-height:0}
+  #editorMask .modal-foot{padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+}
+@media (max-width:480px){
+  .topbar{gap:6px;padding:0 8px}
+  .brand{gap:0}
+  .brand-text{display:none}
+  .content-wrap{padding:16px 16px 72px}
 }
 @media (prefers-reduced-motion:reduce){
   *{transition:none!important;animation:none!important}
@@ -600,11 +615,11 @@ body.drawer-open .scrim{display:block}
     <span class="brand-text" id="brandText">我的笔记</span>
     <span class="brand-sub">个人知识库</span>
   </div>
-  <div class="searchbox">
+  <div class="searchbox" role="search">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
-    <input type="text" id="searchInput" placeholder="搜索笔记标题、正文或标签…" autocomplete="off">
+    <input type="search" id="searchInput" aria-label="全局搜索笔记" placeholder="全局搜索标题、正文或标签…" autocomplete="off">
   </div>
-  <button class="primary-btn" id="writeBtn">
+  <button class="primary-btn" id="writeBtn" aria-label="写笔记">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
     <span class="lbl">写笔记</span>
   </button>
@@ -639,9 +654,9 @@ body.drawer-open .scrim{display:block}
     <div class="sync-status off" id="syncStatus" hidden><span class="dot"></span><span id="syncStatusText">云同步</span></div>
     <button class="tool-btn" id="syncBtn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17.5 9.5 4.5 4.5 0 0 1 17 18H7Z"/><path d="m9 14 3-3 3 3M12 11v6"/></svg>
-      <span id="syncBtnLabel">云同步</span>
+      <span id="syncBtnLabel">同步设置</span>
     </button>
-    <div class="sidebar-foot">你在网页里写的笔记保存在<br>当前设备浏览器中，仅自己可见<br>托管于 GitHub Pages · 全端可读</div>
+    <div class="sidebar-foot">本地模式：笔记仅保存在当前浏览器<br>开启云同步后可加密跨设备使用<br>GitHub Pages 托管</div>
   </aside>
 
   <section class="listpane" id="listpane" aria-label="笔记列表">
@@ -661,8 +676,8 @@ body.drawer-open .scrim{display:block}
 
 <!-- ===== 编辑弹窗 ===== -->
 <div class="modal-mask" id="editorMask" hidden>
-  <div class="modal" role="dialog" aria-modal="true" aria-label="编辑笔记">
-    <div class="modal-head" id="editorTitle">写笔记 <span class="local-badge">仅保存在本设备</span></div>
+  <div class="modal" role="dialog" aria-modal="true" aria-label="写笔记">
+    <div class="modal-head" id="editorTitle">写笔记 <span class="local-badge">本地保存 · 可云同步</span></div>
     <div class="modal-body">
       <div class="field-row">
         <div class="field">
@@ -681,20 +696,20 @@ body.drawer-open .scrim{display:block}
       <div class="field">
         <label>内容（选中文字点上方按钮即可排版）</label>
         <div class="ed-toolbar">
-          <button type="button" data-cmd="bold" title="加粗"><b>B</b></button>
-          <button type="button" data-cmd="italic" title="斜体"><i>I</i></button>
+          <button type="button" data-cmd="bold" title="加粗" aria-label="加粗"><b>B</b></button>
+          <button type="button" data-cmd="italic" title="斜体" aria-label="斜体"><i>I</i></button>
           <span class="tb-sep"></span>
-          <button type="button" data-cmd="h2" title="小标题">小标题</button>
-          <button type="button" data-cmd="list" title="无序列表">• 列表</button>
-          <button type="button" data-cmd="task" title="待办清单">☑ 待办</button>
+          <button type="button" data-cmd="h2" title="小标题" aria-label="插入小标题">小标题</button>
+          <button type="button" data-cmd="list" title="无序列表" aria-label="插入无序列表">• 列表</button>
+          <button type="button" data-cmd="task" title="待办清单" aria-label="插入待办清单">☑ 待办</button>
           <span class="tb-sep"></span>
           <span style="font-size:11px;color:var(--muted)">选中文字可弹出格式工具栏</span>
         </div>
         <div style="position:relative">
-          <div id="edContent" contenteditable="true" class="editable-content" placeholder="开始写…"></div>
+          <div id="edContent" contenteditable="true" class="editable-content" role="textbox" aria-multiline="true" aria-label="笔记内容" placeholder="开始写…"></div>
           <div id="floatBar" class="float-bar" hidden>
-            <button type="button" data-fcmd="bold" title="加粗"><b>B</b></button>
-            <button type="button" data-fcmd="italic" title="斜体"><i>I</i></button>
+            <button type="button" data-fcmd="bold" title="加粗" aria-label="加粗"><b>B</b></button>
+            <button type="button" data-fcmd="italic" title="斜体" aria-label="斜体"><i>I</i></button>
             <span class="fb-sep"></span>
             <input type="number" id="fbFontSize" class="fb-num" title="字号(px)" min="8" max="72" placeholder="字号">
             <select id="fbFontFamily" title="字体">
@@ -775,12 +790,12 @@ body.drawer-open .scrim{display:block}
     <div class="modal-body">
       <div id="syncSetup">
         <div class="sync-desc">
-          开启后，笔记会<b>加密</b>存到你的 GitHub 仓库，任何设备输入同样的密码即可读写<b>同一份</b>笔记（手机写、电脑立刻能看到）。<br>
-          需要：你之前给我创建的那个 GitHub Token（以 <code>ghp_</code> 开头），以及一个<b>笔记密码</b>（用于加密，务必记牢——密码错了无法解开云端笔记）。
+          开启后，笔记会<b>加密</b>存到你的 GitHub 仓库。其他设备使用相同配置后，可读取和写入<b>同一份</b>笔记；打开页面或点“从云端获取”即可同步。<br>
+          需要一个具有该仓库读写权限的 GitHub Token，以及一个<b>笔记密码</b>（用于加密，务必记牢——密码错了无法解开云端笔记）。
         </div>
         <div class="field">
           <label for="syncToken">GitHub Token</label>
-          <input type="password" id="syncToken" placeholder="ghp_ 开头…" autocomplete="off">
+          <input type="password" id="syncToken" placeholder="粘贴 GitHub Token" autocomplete="off">
         </div>
         <div class="field">
           <label for="syncPassword">笔记密码（用于加密，请记牢）</label>
@@ -830,15 +845,15 @@ var DEFAULT_DATA = {
           date: "2026-08-26",
           tags: ["说明"],
           content:
-"这是一个**完全属于你**的个人笔记网站，所有内容都由你决定。\n\n## 现在你可以在网页里直接写笔记\n\n- 点顶部蓝色的“写笔记”按钮，就能新建一篇笔记\n- 打开任意笔记，右上角点“编辑”可以修改或删除\n- 侧栏底部可以“新建分类”“导出备份”“导入备份”\n\n## 重要：数据存在哪里\n\n你在网页里写的笔记，会**保存在当前设备的浏览器里**：\n\n- 完全私密，只有你能看到，别人打开这个网址看不到你写的内容\n- 好处：不用登录、离线也能看、不占你的 GitHub\n- 局限：**换一台设备或换浏览器，看不到这边写的内容**\n\n跨设备看自己写的内容，两个办法：\n\n1. 用侧栏的“导出备份 / 导入备份”把数据带到另一台设备\n2. 把内容发给我，我帮你同步到云端（这样所有设备都能看到）\n\n## 排版效果示例\n\n> 引用块用来放重点提示，会以绿色竖线标出。\n\n1. 有序列表适合步骤说明\n2. 每条笔记还支持**加粗**、`行内代码`、待办清单等功能\n\n- [x] 已完成的事项会显示为勾选状态\n- [ ] 未完成的事项可以继续跟踪\n\n```\n代码块支持等宽字体排版，适合贴代码片段\n```"
+"这是一个**完全属于你**的个人笔记网站，所有内容都由你决定。\n\n## 现在你可以在网页里直接写笔记\n\n- 点顶部绿色的“写笔记”按钮，就能新建一篇笔记\n- 打开任意笔记，右上角点“编辑”可以修改或删除\n- 侧栏底部可以“新建分类”“导出备份”“导入备份”\n\n## 重要：数据存在哪里\n\n你在网页里写的笔记，默认**保存在当前设备的浏览器里**：\n\n- 本地内容不会自动公开，只有你能看到\n- 好处：不用登录、无需配置，打开网页就能记录\n- 局限：**未开启云同步时，换一台设备或换浏览器，看不到这边写的内容**\n\n跨设备看自己写的内容，两个办法：\n\n1. 用侧栏的“导出备份 / 导入备份”把数据带到另一台设备\n2. 用侧栏的“同步设置”开启 GitHub 加密云同步\n\n## 排版效果示例\n\n> 引用块用来放重点提示，会以绿色竖线标出。\n\n1. 有序列表适合步骤说明\n2. 每条笔记还支持**加粗**、`行内代码`、待办清单等功能\n\n- [x] 已完成的事项会显示为勾选状态\n- [ ] 未完成的事项可以继续跟踪\n\n```\n代码块支持等宽字体排版，适合贴代码片段\n```"
         },
         {
           id: "how-to-update",
-          title: "两种更新方式，怎么选",
+          title: "两种使用方式，怎么选",
           date: "2026-08-26",
           tags: ["说明", "更新"],
           content:
-"这个网站有两套更新方式，你可以混着用：\n\n## 方式一：自己在网页里写（推荐日常）\n\n- 打开网址，点“写笔记”直接记，即时保存\n- 适合随手记录、临时想法、待办清单\n- 数据只存在当前设备的浏览器，只有你能看到\n\n## 方式二：发给我同步到云端（跨设备）\n\n把整理好的内容直接发给我，我会：\n\n1. 按你的内容新建分类或补充到已有分类\n2. 排版成适合阅读的格式\n3. 更新到 GitHub 云端，所有设备打开网址都能看到最新内容\n\n## 日常建议\n\n- 手机随手记 → 方式一，最快\n- 重要、想长期保留、要多设备看的内容 → 发我同步（方式二）\n- 定期用“导出备份”留一份 JSON 文件，更保险\n\n## 注意事项\n\n同步到云端的内容是公开网址，**任何人都能看**，请勿放身份证号、密码等敏感信息；本地写的内容则不会公开。"
+"这个网站有两种使用方式，可以按需要选择：\n\n## 方式一：自己在网页里写（推荐日常）\n\n- 打开网址，点“写笔记”，填写内容后点“保存”\n- 适合随手记录、临时想法、待办清单\n- 默认只保存在当前设备的浏览器中，不会自动公开\n\n## 方式二：开启 GitHub 加密云同步（跨设备）\n\n1. 打开侧栏的“同步设置”\n2. 按页面提示填写 GitHub Token、笔记密码和仓库名\n3. 开启后，笔记会加密保存到 GitHub；其他设备使用相同配置即可同步\n\n## 日常建议\n\n- 单设备随手记 → 本地模式即可，简单快捷\n- 需要在多设备使用 → 开启加密云同步\n- 定期用“导出备份”留一份 JSON 文件，更保险\n\n## 注意事项\n\n云端笔记文件经过加密，仍请妥善保管 GitHub Token 和笔记密码；本地模式下的内容不会自动上传。"
         }
       ]
     },
@@ -1482,7 +1497,7 @@ function renderList(){
 
   var list = visibleNotes();
   var title, count;
-  if (state.query){ title = '搜索结果'; count = list.length + ' 篇'; }
+  if (state.query){ title = '全局搜索'; count = list.length + ' 篇'; }
   else if (state.tag){ title = '标签 · ' + state.tag; count = list.length + ' 篇'; }
   else if (state.cat === 'all'){ title = '全部笔记'; count = list.length + ' 篇'; }
   else { var c = findCat(state.cat); title = c ? c.name : '全部笔记'; count = list.length + ' 篇'; }
@@ -1490,7 +1505,9 @@ function renderList(){
   document.getElementById('listCount').textContent = count;
 
   if (list.length === 0){
-    scroll.innerHTML = '<div class="empty">这里还没有笔记<br>点顶部“写笔记”记一条吧</div>';
+    scroll.innerHTML = state.query
+      ? '<div class="empty">没有找到匹配“' + escapeHtml(state.query) + '”的笔记<br>换个关键词试试</div>'
+      : '<div class="empty">这里还没有笔记<br>点顶部“写笔记”记一条吧</div>';
     return;
   }
   var html = '';
@@ -1577,7 +1594,15 @@ function renderNote(){
     return;
   }
   var found = findNote(state.note);
-  if (!found){ wrap.innerHTML = '<div class="note-view-empty"><div class="t1">笔记不存在</div></div>'; return; }
+  if (!found){
+    wrap.innerHTML =
+      '<div class="note-view-empty">' + ICONS.openBook +
+      '<div class="t1">没有找到这篇笔记</div>' +
+      '<div class="t2">它可能已被删除，也可能只保存在另一台设备或浏览器中。</div>' +
+      '<button class="ghost-btn" id="missingBackBtn">返回全部笔记</button></div>';
+    document.getElementById('missingBackBtn').addEventListener('click', function(){ openCategory('all'); });
+    return;
+  }
   var n = found.note, c = found.cat;
   var tags = n.tags.map(function(t){
     return '<button class="tag-btn" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</button>';
@@ -1587,17 +1612,19 @@ function renderNote(){
     '<div class="note-meta">' +
       '<span class="cat-chip">' + escapeHtml(c.name) + '</span>' +
       '<span class="date-chip">' + ICONS.calendar + escapeHtml(n.date) + '</span>' +
+      '<div class="note-actions">' +
       '<button class="edit-note-btn" id="editNoteBtn">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>' +
         '编辑' +
       '</button>' +
-      '<button class="move-btn" id="moveUpBtn" title="上移一篇">↑</button>' +
-      '<button class="move-btn" id="moveDownBtn" title="下移一篇">↓</button>' +
+      '<button class="move-btn" id="moveUpBtn" title="上移一篇" aria-label="上移一篇">↑</button>' +
+      '<button class="move-btn" id="moveDownBtn" title="下移一篇" aria-label="下移一篇">↓</button>' +
+      '</div>' +
     '</div>' +
     '<h1 class="note-title' + (hasUnfinishedTasks(n) ? ' has-tasks' : '') + '">' + escapeHtml(n.title) + '</h1>' +
     '<div class="note-tags">' + tags + '</div>' +
     '<div class="note-body">' + (n.format === 'html' ? n.content : parseMarkdown(n.content)) + '</div>' +
-    '<div class="note-edit-hint"><strong>这篇笔记存在当前设备浏览器里。</strong> 想改内容点右上角“编辑”；想让它出现在其他设备，用“导出备份”带走，或把内容发给我同步到云端。</div>';
+    '<div class="note-edit-hint"><strong>这篇笔记会保存到当前设备。</strong> 需要跨设备使用时，请在左侧“同步设置”中开启 GitHub 加密云同步，或用“导出备份 / 导入备份”迁移。</div>';
   var back = document.getElementById('backBtn');
   if (back) back.addEventListener('click', function(){ closeReading(); });
   var edit = document.getElementById('editNoteBtn');
@@ -1666,7 +1693,7 @@ function openCategory(id){
   state.cat = id; state.note = null; state.query = ''; state.tag = null;
   document.getElementById('searchInput').value = '';
   renderSidebar(); renderList(); renderNote(); updateHash();
-  document.body.classList.remove('drawer-open');
+  document.body.classList.remove('drawer-open', 'reading');
 }
 function closeReading(){
   document.body.classList.remove('reading');
@@ -1676,12 +1703,12 @@ function handleHash(){
   var m;
   if ((m = h.match(/^#\/note\/([^/]+)$/))){
     var f = findNote(m[1]);
-    if (f){
-      state.note = m[1]; state.cat = f.cat.id;
-      renderSidebar(); renderList(); renderNote();
-      document.getElementById('contentpane').scrollTop = 0;
-      document.body.classList.add('reading');
-    }
+    state.note = m[1]; state.cat = f ? f.cat.id : 'all';
+    state.query = ''; state.tag = null;
+    document.getElementById('searchInput').value = '';
+    renderSidebar(); renderList(); renderNote();
+    document.getElementById('contentpane').scrollTop = 0;
+    document.body.classList.add('reading');
   } else if ((m = h.match(/^#\/cat\/([^/]+)$/))){
     openCategory(m[1]);
   } else {
@@ -1807,7 +1834,8 @@ function insertTaskItem(){
 function openEditor(mode, noteId){
   editor.mode = mode; editor.noteId = noteId || null;
   document.getElementById('editorTitle').innerHTML =
-    (mode === 'edit' ? '编辑笔记' : '写笔记') + ' <span class="local-badge">仅保存在本设备</span>';
+    (mode === 'edit' ? '编辑笔记' : '写笔记') + ' <span class="local-badge">本地保存 · 可云同步</span>';
+  document.querySelector('#editorMask [role="dialog"]').setAttribute('aria-label', mode === 'edit' ? '编辑笔记' : '写笔记');
   var sel = document.getElementById('edCat');
   sel.innerHTML = current.categories.map(function(c){
     return '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>';
@@ -2251,8 +2279,11 @@ function bind(){
     clearTimeout(timer);
     timer = setTimeout(function(){
       state.query = search.value.trim();
-      if (state.query){ state.note = null; document.body.classList.remove('reading'); }
-      renderList(); renderNote(); updateHash();
+      if (state.query){
+        state.note = null; state.tag = null; state.cat = 'all';
+        document.body.classList.remove('reading');
+      }
+      renderSidebar(); renderList(); renderNote(); updateHash();
     }, 180);
   });
 
