@@ -811,6 +811,7 @@ body.drawer-open .scrim{display:block}
         <div class="sync-btns" style="margin-top:12px">
           <button class="ghost-btn" id="syncPullBtn">从云端获取</button>
           <button class="ghost-btn" id="syncPushBtn">上传到云端</button>
+          <button class="ghost-btn" id="syncEditBtn">更换 Token</button>
           <button class="danger-btn" id="syncOffBtn">关闭云同步</button>
         </div>
       </div>
@@ -2123,13 +2124,20 @@ async function ensureOwner(){
   saveSyncConfig(sync);
   return owner;
 }
+async function ghErr(res, fallback){
+  var m = fallback;
+  try { var b = await res.json(); if (b && b.message) m = res.status + '：' + b.message; } catch(e){}
+  return new Error(m);
+}
 async function cloudPull(){
   var owner = await ensureOwner();
   var res = await ghApi(sync.token, '/repos/'+owner+'/'+syncRepo()+'/contents/'+DATA_PATH);
   if (res.status === 404) return { exists:false };
-  if (!res.ok) throw new Error('云端读取失败');
+  if (!res.ok) throw await ghErr(res, '云端读取失败');
   var j = await res.json();
-  var data = await decryptJson(fromB64(j.content), sync.password);
+  var data;
+  try { data = await decryptJson(fromB64(j.content), sync.password); }
+  catch(e){ throw new Error('密码错误，无法解密云端笔记（请确认填写的是当初加密用的同一个密码）'); }
   normalizeData(data);
   lastSha = j.sha;
   return { exists:true, data:data };
@@ -2145,7 +2153,7 @@ async function cloudPush(data){
     if (res.status === 200) payload.sha = (await res.json()).sha;
   }
   var putRes = await ghApi(sync.token, '/repos/'+owner+'/'+syncRepo()+'/contents/'+DATA_PATH, { method:'PUT', body: JSON.stringify(payload) });
-  if (!putRes.ok) throw new Error('云端写入失败');
+  if (!putRes.ok) throw await ghErr(putRes, '云端写入失败');
   lastSha = (await putRes.json()).content.sha;
   return true;
 }
@@ -2170,7 +2178,7 @@ async function maybePush(){
     await cloudPush(current);
     setSyncStatus('on', '已同步到云端');
   } catch(e){
-    setSyncStatus('error', '云端同步失败');
+    setSyncStatus('error', '云端同步失败：' + (e && e.message ? e.message : '未知错误'));
   }
 }
 async function syncFromCloud(){
@@ -2190,8 +2198,9 @@ async function syncFromCloud(){
       setSyncStatus('on', '云端暂无数据，本地笔记会自动上传');
     }
   } catch(e){
-    setSyncStatus('error', '云端连接失败，当前为本地模式');
-    if (e && e.message && String(e.message).indexOf('解密') >= 0) showToast('密码错误，无法解密云端笔记');
+    var msg = e && e.message ? e.message : '连接失败';
+    setSyncStatus('error', msg);
+    showToast(msg);
   }
 }
 
@@ -2247,7 +2256,9 @@ async function syncPullNow(){
       setSyncStatus('on', '云端暂无数据');
     }
   } catch(e){
-    setSyncStatus('error', '获取失败');
+    var msg = e && e.message ? e.message : '获取失败';
+    setSyncStatus('error', msg);
+    showToast(msg);
   }
 }
 async function syncPushNow(){
@@ -2257,8 +2268,18 @@ async function syncPushNow(){
     setSyncStatus('on', '已上传到云端');
     showToast('已上传到云端');
   } catch(e){
-    setSyncStatus('error', '上传失败');
+    var msg = e && e.message ? e.message : '上传失败';
+    setSyncStatus('error', msg);
+    showToast(msg);
   }
+}
+function editSync(){
+  document.getElementById('syncRepo').value = syncRepo();
+  document.getElementById('syncToken').value = '';
+  document.getElementById('syncPassword').value = '';
+  document.getElementById('syncSetup').hidden = false;
+  document.getElementById('syncPanel').hidden = true;
+  document.getElementById('syncSave').hidden = false;
 }
 function disableSync(){
   if (!confirm('关闭云同步？本设备上的配置将被清除，本地已有笔记会保留。')) return;
@@ -2572,6 +2593,7 @@ function bind(){
   document.getElementById('syncPullBtn').addEventListener('click', syncPullNow);
   document.getElementById('syncPushBtn').addEventListener('click', syncPushNow);
   document.getElementById('syncOffBtn').addEventListener('click', disableSync);
+  document.getElementById('syncEditBtn').addEventListener('click', editSync);
   document.getElementById('syncMask').addEventListener('click', function(e){
     if (e.target === this) closeSync();
   });
