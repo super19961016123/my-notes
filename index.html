@@ -798,8 +798,8 @@ body.drawer-open .scrim{display:block}
           <input type="password" id="syncToken" placeholder="粘贴 GitHub Token" autocomplete="off">
         </div>
         <div class="field">
-          <label for="syncPassword">笔记密码（用于加密，请记牢）</label>
-          <input type="password" id="syncPassword" placeholder="设一个你能记住的密码" autocomplete="off">
+          <label for="syncPassword">笔记密码（用于加密，区分大小写，可含字母/数字/符号）</label>
+          <input type="password" id="syncPassword" placeholder="4 位以上，多端需填同一个" autocomplete="off">
         </div>
         <div class="field">
           <label for="syncRepo">仓库名（一般不用改）</label>
@@ -808,6 +808,7 @@ body.drawer-open .scrim{display:block}
       </div>
       <div id="syncPanel" hidden>
         <div class="sync-desc" id="syncInfo">…</div>
+        <div class="sync-desc" id="syncDiag" style="margin-top:6px;font-size:11.5px;color:var(--muted)"></div>
         <div class="sync-btns" style="margin-top:12px">
           <button class="ghost-btn" id="syncPullBtn">从云端获取</button>
           <button class="ghost-btn" id="syncPushBtn">上传到云端</button>
@@ -2060,6 +2061,11 @@ function saveSyncConfig(cfg){
 function clearSyncConfig(){
   try { localStorage.removeItem(SYNC_KEY); } catch(e){}
 }
+function syncEnvCheck(){
+  if (!window.crypto || !window.crypto.subtle) return '当前浏览器不支持加密功能：请确认通过 HTTPS 打开网页、未使用禁用加密的隐私/无痕模式';
+  try { localStorage.setItem('__env_t','1'); localStorage.removeItem('__env_t'); } catch(e){ return '浏览器本地存储被禁用，无法保存配置，请检查隐私模式或站点拦截设置'; }
+  return null;
+}
 
 /* 加密：PBKDF2 派生密钥 + AES-GCM */
 function toB64(str){
@@ -2218,6 +2224,12 @@ function renderSyncPanel(){
     setup.hidden = true; panel.hidden = false; saveBtn.hidden = true;
     document.getElementById('syncInfo').innerHTML =
       '已连接：<b>' + escapeHtml(sync.owner || 'GitHub 账号') + '</b> / <b>' + escapeHtml(syncRepo()) + '</b> 仓库<br>笔记以加密形式存于 <code>' + DATA_PATH + '</code>，密码只有你知道。';
+    var cryptoOk = !!(window.crypto && window.crypto.subtle);
+    var lsOk = true; try { localStorage.setItem('__env_t','1'); localStorage.removeItem('__env_t'); } catch(e){ lsOk = false; }
+    var tok = sync.token || '';
+    var diag = '环境：加密' + (cryptoOk ? '可用' : '不可用') + ' · 本地存储' + (lsOk ? '可用' : '不可用') +
+      '；Token：' + escapeHtml(tok.slice(0, 10)) + '…（共 ' + tok.length + ' 位）';
+    document.getElementById('syncDiag').textContent = diag;
   } else {
     setup.hidden = false; panel.hidden = true; saveBtn.hidden = false;
   }
@@ -2229,6 +2241,8 @@ async function enableSync(){
   if (!token){ showToast('请填写 GitHub Token'); return; }
   if (!password){ showToast('请设置笔记密码'); return; }
   if (password.length < 4){ showToast('密码至少 4 位'); return; }
+  var envErr = syncEnvCheck();
+  if (envErr){ setSyncStatus('error', envErr); showToast(envErr); return; }
   setSyncStatus('loading', '正在连接 GitHub…');
   try {
     var owner = await getGhOwner(token);
