@@ -537,6 +537,10 @@ body.drawer-open .scrim{display:block}
   border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);
 }
 .field textarea{resize:vertical;min-height:240px;line-height:1.7}
+.pwd-wrap{position:relative}
+.pwd-wrap input{padding-right:36px}
+.pwd-toggle{position:absolute;right:7px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:var(--muted);padding:4px;line-height:1}
+.pwd-toggle:hover{color:var(--ink)}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .ed-hint{
   font-size:12px;color:var(--muted);line-height:1.7;
@@ -795,11 +799,21 @@ body.drawer-open .scrim{display:block}
         </div>
         <div class="field">
           <label for="syncToken">GitHub Token</label>
-          <input type="password" id="syncToken" placeholder="粘贴 GitHub Token" autocomplete="off">
+          <div class="pwd-wrap">
+            <input type="password" id="syncToken" placeholder="粘贴 GitHub Token" autocomplete="off">
+            <button type="button" class="pwd-toggle" data-target="syncToken" title="显示/隐藏">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
         </div>
         <div class="field">
           <label for="syncPassword">笔记密码（用于加密，区分大小写，可含字母/数字/符号）</label>
-          <input type="password" id="syncPassword" placeholder="4 位以上，多端需填同一个" autocomplete="off">
+          <div class="pwd-wrap">
+            <input type="password" id="syncPassword" placeholder="4 位以上，多端需填同一个" autocomplete="off">
+            <button type="button" class="pwd-toggle" data-target="syncPassword" title="显示/隐藏">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
         </div>
         <div class="field">
           <label for="syncRepo">仓库名（一般不用改）</label>
@@ -2608,6 +2622,14 @@ function bind(){
   document.getElementById('syncPushBtn').addEventListener('click', syncPushNow);
   document.getElementById('syncOffBtn').addEventListener('click', disableSync);
   document.getElementById('syncEditBtn').addEventListener('click', editSync);
+  document.querySelectorAll('.pwd-toggle').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var input = document.getElementById(btn.getAttribute('data-target'));
+      if (!input) return;
+      input.type = (input.type === 'password') ? 'text' : 'password';
+      input.focus();
+    });
+  });
   document.getElementById('syncMask').addEventListener('click', function(e){
     if (e.target === this) closeSync();
   });
