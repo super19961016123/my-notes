@@ -2010,6 +2010,28 @@ function insertTaskItem(){
     node.insertBefore(box, node.firstChild);
   }
 }
+function taskPlainText(item){
+  var clone = item.cloneNode(true);
+  var box = clone.querySelector(':scope > .box');
+  if (box) box.remove();
+  return (clone.textContent || '').replace(/\u00A0/g, '').trim();
+}
+function removeTaskItem(item){
+  var ed = document.getElementById('edContent');
+  var prev = item.previousElementSibling || item.previousSibling;
+  item.remove();
+  if (!ed.querySelector('p,div,li,h1,h2,h3,h4,h5,h6')){
+    ed.innerHTML = '<p><br></p>';
+  }
+  var sel = window.getSelection();
+  var focusTarget = prev || ed.lastChild;
+  if (focusTarget && focusTarget.nodeType === 1){
+    var r = document.createRange();
+    r.selectNodeContents(focusTarget);
+    r.collapse(false);
+    sel.removeAllRanges(); sel.addRange(r);
+  }
+}
 /* ================= 编辑弹窗 ================= */
 function openEditor(mode, noteId){
   editor.mode = mode; editor.noteId = noteId || null;
@@ -2964,12 +2986,13 @@ function bind(){
 
   /* 待办项里按回车创建新段落，避免拆分布局异常 */
   document.getElementById('edContent').addEventListener('keydown', function(e){
+    var sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    var node = sel.anchorNode;
+    if (node && node.nodeType === 3) node = node.parentNode;
+    var taskItem = node ? node.closest('.task-item') : null;
+
     if (e.key === 'Enter'){
-      var sel = window.getSelection();
-      if (!sel.rangeCount) return;
-      var node = sel.anchorNode;
-      if (node && node.nodeType === 3) node = node.parentNode;
-      var taskItem = node ? node.closest('.task-item') : null;
       if (taskItem){
         e.preventDefault();
         var p = document.createElement('p');
@@ -2981,6 +3004,13 @@ function bind(){
         sel.removeAllRanges();
         sel.addRange(r);
       }
+      return;
+    }
+
+    // 空待办（文字已删光）按退格/删除，整块移除待办行和方框
+    if ((e.key === 'Backspace' || e.key === 'Delete') && taskItem && taskPlainText(taskItem) === ''){
+      e.preventDefault();
+      removeTaskItem(taskItem);
     }
   });
 
