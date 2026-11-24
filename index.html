@@ -2008,6 +2008,22 @@ function insertTaskItem(){
     box.className = 'box';
     box.contentEditable = 'false';
     node.insertBefore(box, node.firstChild);
+    // 光标定位到方框后面的可编辑位置
+    var after = box.nextSibling;
+    var r2 = document.createRange();
+    if (after && after.nodeType === 3){
+      r2.setStart(after, 0);
+    } else if (after){
+      r2.selectNodeContents(after);
+      r2.collapse(true);
+    } else {
+      var nb = document.createTextNode('\u00A0');
+      node.appendChild(nb);
+      r2.setStart(nb, 1);
+    }
+    r2.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(r2);
   }
 }
 function taskPlainText(item){
