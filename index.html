@@ -377,6 +377,7 @@ a:hover{text-decoration:underline}
   font-size:12.5px;color:var(--muted);margin-top:4px;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
 }
+mark{background:#ffe08a;color:inherit;border-radius:3px;padding:0 1px}
 .ni-meta{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
 .ni-date{font-size:11px;color:var(--muted);display:inline-flex;align-items:center;gap:4px}
 .ni-date svg{width:12px;height:12px}
@@ -720,7 +721,7 @@ body.drawer-open .scrim{display:block}
           <button type="button" data-cmd="list" title="无序列表" aria-label="插入无序列表">• 列表</button>
           <button type="button" data-cmd="task" title="待办清单" aria-label="插入待办清单">☑ 待办</button>
           <span class="tb-sep"></span>
-          <span style="font-size:11px;color:var(--muted)">选中文字可弹出格式工具栏</span>
+          <span style="font-size:11px;color:var(--muted)">选中文字可弹出格式工具栏 · Ctrl+S 保存</span>
         </div>
         <div style="position:relative">
           <div id="edContent" contenteditable="true" class="editable-content" role="textbox" aria-multiline="true" aria-label="笔记内容" placeholder="开始写…"></div>
@@ -1457,6 +1458,53 @@ function excerpt(s, n){
   var t = stripMd(s);
   return t.length > n ? t.slice(0, n) + '…' : t;
 }
+function escapeRegExp(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+// 纯文本转义后，把命中关键词包成 <mark>
+function highlightText(text, query){
+  var esc = escapeHtml(text);
+  if (!query) return esc;
+  var re = new RegExp('(' + escapeRegExp(escapeHtml(query)) + ')', 'gi');
+  return esc.replace(re, '<mark>$1</mark>');
+}
+// 围绕命中词取上下文片段（纯文本，未转义）
+function contextExcerpt(content, query, n){
+  var t = stripMd(content);
+  if (!query) return t.length > n ? t.slice(0, n) + '…' : t;
+  var idx = t.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return t.length > n ? t.slice(0, n) + '…' : t;
+  var start = Math.max(0, idx - Math.floor(n / 2));
+  var end = Math.min(t.length, start + n);
+  start = Math.max(0, end - n);
+  return (start > 0 ? '…' : '') + t.slice(start, end) + (end < t.length ? '…' : '');
+}
+// 在 DOM 文本节点里高亮命中词（不破坏 HTML 标签）
+function highlightDom(root, query){
+  if (!root || !query) return;
+  var re = new RegExp('(' + escapeRegExp(query) + ')', 'gi');
+  var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+  var nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach(function(node){
+    var val = node.nodeValue || '';
+    re.lastIndex = 0;
+    if (!re.test(val)) return;
+    re.lastIndex = 0;
+    var parts = val.split(re);
+    if (parts.length <= 1) return;
+    var frag = document.createDocumentFragment();
+    parts.forEach(function(part, i){
+      if (part === '') return;
+      if (i % 2 === 1){
+        var mark = document.createElement('mark');
+        mark.textContent = part;
+        frag.appendChild(mark);
+      } else {
+        frag.appendChild(document.createTextNode(part));
+      }
+    });
+    node.parentNode.replaceChild(frag, node);
+  });
+}
 function todayLabel(){
   var d = new Date();
   var y = d.getFullYear(), mo = String(d.getMonth()+1).padStart(2,'0'), da = String(d.getDate()).padStart(2,'0');
@@ -1638,15 +1686,15 @@ function renderList(){
   var html = '';
   list.forEach(function(x){
     html += '<button class="note-item' + (state.note === x.note.id ? ' active' : '') + '" data-id="' + x.note.id + '" draggable="true">' +
-      '<div class="ni-title' + (hasUnfinishedTasks(x.note) ? ' has-tasks' : '') + '">' + escapeHtml(x.note.title) + '</div>' +
-      '<div class="ni-excerpt">' + escapeHtml(excerpt(x.note.content, 64)) + '</div>' +
+      '<div class="ni-title' + (hasUnfinishedTasks(x.note) ? ' has-tasks' : '') + '">' + highlightText(x.note.title, state.query) + '</div>' +
+      '<div class="ni-excerpt">' + highlightText(contextExcerpt(x.note.content, state.query, 64), state.query) + '</div>' +
       '<div class="ni-meta">' +
         '<span class="ni-date">' + ICONS.calendar + escapeHtml(x.note.date) + '</span>' +
         '<span class="ni-cat">' + ICONS.folder + escapeHtml(catPathName(x.cat)) + '</span>' +
         '<span class="ni-tags">' + x.note.tags.filter(function(t){
             var p = x.cat.parent ? (findCat(x.cat.parent) ? findCat(x.cat.parent).name : '') : '';
             return t !== x.cat.name && t !== p;
-          }).slice(0,3).map(function(t){ return '<span class="tag">' + escapeHtml(t) + '</span>'; }).join('') + '</span>' +
+          }).slice(0,3).map(function(t){ return '<span class="tag">' + highlightText(t, state.query) + '</span>'; }).join('') + '</span>' +
       '</div></button>';
   });
   scroll.innerHTML = html;
@@ -1742,11 +1790,15 @@ function renderNote(){
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>' +
         '编辑' +
       '</button>' +
+      '<button class="edit-note-btn" id="exportNoteBtn" title="导出这篇笔记为 HTML 文件" aria-label="导出这篇笔记">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>' +
+        '导出' +
+      '</button>' +
       '<button class="move-btn" id="moveUpBtn" title="上移一篇" aria-label="上移一篇">↑</button>' +
       '<button class="move-btn" id="moveDownBtn" title="下移一篇" aria-label="下移一篇">↓</button>' +
       '</div>' +
     '</div>' +
-    '<h1 class="note-title' + (hasUnfinishedTasks(n) ? ' has-tasks' : '') + '">' + escapeHtml(n.title) + '</h1>' +
+    '<h1 class="note-title' + (hasUnfinishedTasks(n) ? ' has-tasks' : '') + '">' + highlightText(n.title, state.query) + '</h1>' +
     '<div class="note-tags">' + tags + '</div>' +
     '<div class="note-body">' + (n.format === 'html' ? n.content : parseMarkdown(n.content)) + '</div>' +
     '<div class="note-edit-hint"><strong>这篇笔记会保存到当前设备。</strong> 需要跨设备使用时，请在左侧“同步设置”中开启 GitHub 加密云同步，或用“导出备份 / 导入备份”迁移。</div>';
@@ -1754,6 +1806,8 @@ function renderNote(){
   if (back) back.addEventListener('click', function(){ closeReading(); });
   var edit = document.getElementById('editNoteBtn');
   if (edit) edit.addEventListener('click', function(){ openEditor('edit', state.note); });
+  var exp = document.getElementById('exportNoteBtn');
+  if (exp) exp.addEventListener('click', function(){ exportNote(state.note); });
   var up = document.getElementById('moveUpBtn');
   if (up) up.addEventListener('click', function(){ moveNote(-1); });
   var down = document.getElementById('moveDownBtn');
@@ -1774,6 +1828,7 @@ function renderNote(){
       }
     });
   });
+  highlightDom(document.querySelector('.note-body'), state.query);
 }
 function settleDoneToBottom(container, item){
   if (!container || !item || !item.classList.contains('done')) return;
@@ -2256,6 +2311,32 @@ function exportData(){
   a.remove();
   setTimeout(function(){ URL.revokeObjectURL(a.href); }, 500);
   showToast('备份文件已下载');
+}
+function exportNote(noteId){
+  var f = findNote(noteId);
+  if (!f) return;
+  var n = f.note;
+  var body = n.format === 'html' ? n.content : parseMarkdown(n.content);
+  var tags = (n.tags || []).join('、');
+  var safeTitle = (n.title || '笔记').replace(/[\\/:*?"<>|]/g, '_').slice(0, 60);
+  var html = '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+    '<title>' + escapeHtml(n.title) + '</title>' +
+    '<style>body{font-family:-apple-system,BlinkMacSystemFont,"Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:32px 20px;line-height:1.8;color:#1a1a1a;background:#fff}h1{font-size:24px;line-height:1.4}.meta{color:#888;font-size:13px;margin-bottom:20px}.tag{display:inline-block;background:#f0f0f0;border-radius:6px;padding:2px 8px;font-size:12px;margin:0 6px 6px 0}.note-body img{max-width:100%}</style>' +
+    '</head><body>' +
+    '<h1>' + escapeHtml(n.title) + '</h1>' +
+    '<div class="meta">' + escapeHtml(n.date) + (tags ? ' · 标签：' + escapeHtml(tags) : '') + '</div>' +
+    '<div class="note-body">' + body + '</div>' +
+    '</body></html>';
+  var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = safeTitle + '.html';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 500);
+  showToast('已导出这篇笔记');
 }
 function importData(file){
   var reader = new FileReader();
@@ -2955,6 +3036,13 @@ function bind(){
   window.addEventListener('hashchange', handleHash);
 
   document.addEventListener('keydown', function(e){
+    if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')){
+      if (!document.getElementById('editorMask').hidden){
+        e.preventDefault();
+        saveNote();
+      }
+      return;
+    }
     if (e.key === '/' && document.activeElement !== search && !document.getElementById('editorMask').hidden){
       e.preventDefault(); search.focus();
     }
