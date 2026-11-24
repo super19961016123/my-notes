@@ -2016,18 +2016,31 @@ function taskPlainText(item){
   if (box) box.remove();
   return (clone.textContent || '').replace(/\u00A0/g, '').trim();
 }
+function editorIsEmpty(root){
+  var t = (root.textContent || '').replace(/\u00A0/g, '').trim();
+  if (t) return false;
+  if (root.querySelector('p,div,li,h1,h2,h3,h4,h5,h6')) return false;
+  return true;
+}
 function removeTaskItem(item){
   var ed = document.getElementById('edContent');
   var prev = item.previousElementSibling || item.previousSibling;
   item.remove();
-  if (!ed.querySelector('p,div,li,h1,h2,h3,h4,h5,h6')){
+  // 仅当编辑器确实没有任何可见内容时才补空段落；避免误清裸文本段落
+  if (editorIsEmpty(ed)){
     ed.innerHTML = '<p><br></p>';
   }
   var sel = window.getSelection();
   var focusTarget = prev || ed.lastChild;
-  if (focusTarget && focusTarget.nodeType === 1){
+  if (focusTarget){
     var r = document.createRange();
-    r.selectNodeContents(focusTarget);
+    if (focusTarget.nodeType === 3){
+      r.setStart(focusTarget, focusTarget.length);
+    } else if (focusTarget.nodeType === 1){
+      r.selectNodeContents(focusTarget);
+    } else {
+      return;
+    }
     r.collapse(false);
     sel.removeAllRanges(); sel.addRange(r);
   }
