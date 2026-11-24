@@ -2166,14 +2166,22 @@ async function cloudPush(data){
   var owner = await ensureOwner();
   var encrypted = await encryptJson(data, sync.password);
   var payload = { message:'update notes '+new Date().toISOString(), content: toB64(encrypted) };
-  if (lastSha){
-    payload.sha = lastSha;
+  // 上传前总是重新读取云端当前 SHA，避免使用过期缓存导致 409 冲突
+  var res = await ghApi(sync.token, '/repos/'+owner+'/'+syncRepo()+'/contents/'+DATA_PATH);
+  if (res.status === 200){
+    var cur = await res.json();
+    payload.sha = cur.sha;
+    lastSha = cur.sha;
+  } else if (res.status === 404){
+    // 云端文件尚不存在，直接新建，不带 sha
   } else {
-    var res = await ghApi(sync.token, '/repos/'+owner+'/'+syncRepo()+'/contents/'+DATA_PATH);
-    if (res.status === 200) payload.sha = (await res.json()).sha;
+    throw await ghErr(res, '云端读取失败');
   }
   var putRes = await ghApi(sync.token, '/repos/'+owner+'/'+syncRepo()+'/contents/'+DATA_PATH, { method:'PUT', body: JSON.stringify(payload) });
-  if (!putRes.ok) throw await ghErr(putRes, '云端写入失败');
+  if (!putRes.ok){
+    if (putRes.status === 409) throw new Error('409：云端已被其他设备更新，请先点「从云端获取」，再上传');
+    throw await ghErr(putRes, '云端写入失败');
+  }
   lastSha = (await putRes.json()).content.sha;
   return true;
 }
