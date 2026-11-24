@@ -323,6 +323,15 @@ a:hover{text-decoration:underline}
 .sync-desc code{font-family:ui-monospace,Consolas,monospace;color:var(--accent)}
 .sync-owner{font-size:12px;color:var(--ink-soft)}
 .sync-btns{display:flex;flex-wrap:wrap;gap:8px}
+.trash-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.trash-item{display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.trash-item .ti-body{flex:1;min-width:0}
+.trash-item .ti-title{font-size:13.5px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trash-item .ti-meta{font-size:11.5px;color:var(--muted);margin-top:2px}
+.trash-item .ti-actions{display:flex;gap:6px;flex-shrink:0}
+.trash-item .ti-actions button{font-size:12px;padding:5px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.trash-item .ti-actions .ti-del{color:#e11d48;border-color:#fecdd3}
+.trash-empty{font-size:12.5px;color:var(--muted);text-align:center;padding:24px 0}
 .sidebar-foot{
   margin-top:10px;padding:12px 10px 4px;
   border-top:1px solid var(--line);
@@ -649,6 +658,10 @@ body.drawer-open .scrim{display:block}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M8 7l4-4 4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
         导入备份
       </button>
+      <button class="tool-btn" id="trashBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/></svg>
+        回收站
+      </button>
       <input type="file" id="importFile" accept=".json,application/json" hidden>
     </div>
     <div class="storage-info" id="storageInfo">
@@ -823,6 +836,7 @@ body.drawer-open .scrim{display:block}
       <div id="syncPanel" hidden>
         <div class="sync-desc" id="syncInfo">…</div>
         <div class="sync-desc" id="syncDiag" style="margin-top:6px;font-size:11.5px;color:var(--muted)"></div>
+        <div class="sync-desc" id="syncState" style="margin-top:6px;font-size:11.5px;color:var(--muted)"></div>
         <div class="sync-btns" style="margin-top:12px">
           <button class="ghost-btn" id="syncPullBtn">从云端获取</button>
           <button class="ghost-btn" id="syncPushBtn">上传到云端</button>
@@ -835,6 +849,27 @@ body.drawer-open .scrim{display:block}
       <span class="spacer"></span>
       <button class="ghost-btn" id="syncCancel">关闭</button>
       <button class="primary-btn" id="syncSave" hidden>开启云同步</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 回收站 / 兜底快照 ===== -->
+<div class="modal-mask" id="trashMask" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-label="回收站" style="max-width:520px">
+    <div class="modal-head">回收站 <span class="local-badge">本设备本地</span></div>
+    <div class="modal-body">
+      <div id="backupBox" hidden>
+        <div class="sync-desc" id="backupInfo"></div>
+        <div class="sync-btns" style="margin-top:8px">
+          <button class="ghost-btn" id="restoreBackupBtn">还原上一份快照</button>
+        </div>
+      </div>
+      <div id="trashList" class="trash-list"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="danger-btn" id="emptyTrashBtn" style="display:none">清空回收站</button>
+      <span class="spacer"></span>
+      <button class="ghost-btn" id="trashCloseBtn">关闭</button>
     </div>
   </div>
 </div>
@@ -1207,9 +1242,83 @@ function persist(){
   }
 }
 
+/* ===== 回收站 / 兜底快照 / 草稿 / 同步状态（均为本设备本地数据，不上云） ===== */
+var TRASH_KEY = 'mynotes-trash-v1';
+var BACKUP_KEY = 'mynotes-backup-v1';
+var DRAFT_KEY = 'mynotes-draft-v1';
+var SYNC_STATE_KEY = 'mynotes-sync-state-v1';
+
+function readJSON(key){
+  try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch(e){ return null; }
+}
+function writeJSON(key, obj){
+  try { localStorage.setItem(key, JSON.stringify(obj)); return true; } catch(e){ return false; }
+}
+
+/* 回收站 */
+function loadTrash(){ var t = readJSON(TRASH_KEY); return Array.isArray(t) ? t : []; }
+function saveTrash(t){ writeJSON(TRASH_KEY, t); }
+
+/* 覆盖前兜底快照（只留最近一份） */
+function saveBackup(reason){
+  var snap = { savedAt: new Date().toISOString(), reason: reason || '', data: cloneData(current) };
+  writeJSON(BACKUP_KEY, snap);
+}
+function loadBackup(){ return readJSON(BACKUP_KEY); }
+
+/* 编辑器草稿 */
+function draftEmpty(){
+  var c = document.getElementById('edContent').innerHTML || '';
+  var plain = c.replace(/<br\s*\/?>/g, '').replace(/<[^>]+>/g, '').trim();
+  return !document.getElementById('edTitle').value.trim() &&
+         !document.getElementById('edTags').value.trim() && !plain;
+}
+function saveDraft(){
+  if (draftEmpty()){ clearDraft(); return; }
+  writeJSON(DRAFT_KEY, {
+    mode: editor.mode, noteId: editor.noteId,
+    title: document.getElementById('edTitle').value,
+    tags: document.getElementById('edTags').value,
+    catId: document.getElementById('edCat').value,
+    content: document.getElementById('edContent').innerHTML,
+    savedAt: new Date().toISOString()
+  });
+}
+function loadDraft(){ return readJSON(DRAFT_KEY); }
+function clearDraft(){ try { localStorage.removeItem(DRAFT_KEY); } catch(e){} }
+
+/* 同步状态（最近成功/失败时间） */
+function loadSyncState(){ var s = readJSON(SYNC_STATE_KEY); return s || {}; }
+function saveSyncState(s){ writeJSON(SYNC_STATE_KEY, s); }
+function recordSyncState(patch){
+  var s = loadSyncState();
+  Object.keys(patch).forEach(function(k){ s[k] = patch[k]; });
+  saveSyncState(s);
+}
+
 /* ================= 工具函数 ================= */
 function escapeHtml(s){
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+var STRIP_TAGS = ['script','style','iframe','object','embed','img','video','audio','link','meta','form','input','button','textarea','select','svg','canvas','noscript'];
+var SAFE_STYLE = ['color','backgroundColor','fontSize','fontFamily','fontWeight','fontStyle','textDecoration','textAlign','lineHeight'];
+function sanitizeFragment(root){
+  Array.prototype.slice.call(root.querySelectorAll('*')).forEach(function(el){
+    if (STRIP_TAGS.indexOf(el.tagName.toLowerCase()) !== -1){ el.remove(); return; }
+    Array.prototype.slice.call(el.attributes).forEach(function(a){
+      var name = a.name.toLowerCase();
+      if (name.indexOf('on') === 0 || name === 'class' || name === 'id'){ el.removeAttribute(a.name); return; }
+      if ((name === 'href' || name === 'src') && (a.value || '').trim().toLowerCase().indexOf('javascript:') === 0){
+        el.removeAttribute(a.name);
+      }
+    });
+    if (el.style){
+      var keep = {};
+      SAFE_STYLE.forEach(function(p){ if (el.style[p]) keep[p] = el.style[p]; });
+      el.removeAttribute('style');
+      Object.keys(keep).forEach(function(p){ el.style[p] = keep[p]; });
+    }
+  });
 }
 function inline(s){
   s = escapeHtml(s);
@@ -1371,7 +1480,7 @@ var state = {
   query: '',
   tag: null
 };
-var editor = { mode: 'new', noteId: null };
+var editor = { mode: 'new', noteId: null, dirty: false };
 
 function allNotes(){
   var list = [];
@@ -1874,11 +1983,35 @@ function openEditor(mode, noteId){
     document.getElementById('edContent').innerHTML = '';
     document.getElementById('edDelete').style.display = 'none';
   }
+  // 恢复上次未保存的草稿
+  var draft = loadDraft();
+  var draftMatch = draft && ((mode === 'edit' && draft.noteId === noteId) || (mode === 'new' && !draft.noteId));
+  var restoredDraft = false;
+  if (draftMatch){
+    if (confirm('检测到上次未保存的草稿，是否恢复？\n（取消将放弃该草稿）')){
+      document.getElementById('edTitle').value = draft.title || '';
+      if (draft.catId && findCat(draft.catId)) sel.value = draft.catId;
+      document.getElementById('edTags').value = draft.tags || '';
+      document.getElementById('edContent').innerHTML = draft.content || '';
+      restoredDraft = true;
+    } else {
+      clearDraft();
+    }
+  }
+  editor.dirty = restoredDraft;
   document.getElementById('editorMask').hidden = false;
   document.getElementById('edTitle').focus();
 }
 function closeEditor(){
   document.getElementById('editorMask').hidden = true;
+  editor.dirty = false;
+}
+function requestCloseEditor(){
+  if (editor.dirty && !draftEmpty()){
+    if (!confirm('有未保存的内容，确定放弃吗？')) return;
+    clearDraft();
+  }
+  closeEditor();
 }
 function saveNote(){
   var title = document.getElementById('edTitle').value.trim();
@@ -1908,6 +2041,8 @@ function saveNote(){
     }
   }
   persist();
+  clearDraft();
+  editor.dirty = false;
   closeEditor();
   state.note = savedId;
   var savedNote = findNote(savedId);
@@ -1923,18 +2058,20 @@ function saveNote(){
 }
 function deleteNote(){
   if (!editor.noteId) return;
-  if (!confirm('确定删除这篇笔记吗？删除后无法恢复。')) return;
   var f = findNote(editor.noteId);
-  if (f){
-    f.cat.notes = f.cat.notes.filter(function(n){ return n.id !== editor.noteId; });
-    persist();
-  }
+  if (!f) return;
+  if (!confirm('将这篇笔记移入回收站？之后可在回收站还原。')) return;
+  var trash = loadTrash();
+  trash.push({ note: cloneData(f.note), catId: f.cat.id, catName: f.cat.name, deletedAt: new Date().toISOString() });
+  saveTrash(trash);
+  f.cat.notes = f.cat.notes.filter(function(n){ return n.id !== editor.noteId; });
+  persist();
   closeEditor();
   state.note = null; state.query = ''; state.tag = null;
-  if (state.cat !== 'all' && f && f.cat.notes.length === 0){ state.cat = 'all'; }
+  if (state.cat !== 'all' && f.cat.notes.length === 0){ state.cat = 'all'; }
   renderSidebar(); renderList(); renderNote(); updateHash();
   document.body.classList.remove('reading');
-  showToast('笔记已删除');
+  showToast('已移入回收站，可在回收站还原');
   maybePush();
 }
 
@@ -1987,6 +2124,89 @@ function deleteCategory(id){
   persist();
   renderSidebar(); renderList(); renderNote(); updateHash();
   showToast('已删除分类');
+  maybePush();
+}
+
+/* ================= 回收站与兜底快照 ================= */
+function fmtTime(iso){
+  try { return new Date(iso).toLocaleString('zh-CN', { hour12: false }); } catch(e){ return iso || ''; }
+}
+function openTrash(){
+  var snap = loadBackup();
+  var box = document.getElementById('backupBox');
+  if (snap && snap.data){
+    box.hidden = false;
+    var reason = snap.reason ? '（' + escapeHtml(snap.reason) + '）' : '';
+    document.getElementById('backupInfo').innerHTML =
+      '覆盖前自动备份：' + escapeHtml(fmtTime(snap.savedAt)) + reason + '<br>如最近导入或同步后内容异常，可先还原这一份。';
+  } else {
+    box.hidden = true;
+  }
+  var trash = loadTrash();
+  var list = document.getElementById('trashList');
+  var emptyBtn = document.getElementById('emptyTrashBtn');
+  if (!trash.length){
+    list.innerHTML = '<div class="trash-empty">回收站是空的</div>';
+    emptyBtn.style.display = 'none';
+  } else {
+    emptyBtn.style.display = '';
+    list.innerHTML = trash.map(function(item, idx){
+      return '<div class="trash-item">' +
+        '<div class="ti-body">' +
+          '<div class="ti-title">' + escapeHtml(item.note.title || '未命名') + '</div>' +
+          '<div class="ti-meta">' + escapeHtml(item.catName || '未分类') + ' · 删除于 ' + escapeHtml(fmtTime(item.deletedAt)) + '</div>' +
+        '</div>' +
+        '<div class="ti-actions">' +
+          '<button data-restore="' + idx + '">还原</button>' +
+          '<button class="ti-del" data-destroy="' + idx + '">彻底删除</button>' +
+        '</div></div>';
+    }).join('');
+  }
+  document.getElementById('trashMask').hidden = false;
+}
+function restoreTrashItem(idx){
+  var trash = loadTrash();
+  var item = trash[idx];
+  if (!item) return;
+  var cat = findCat(item.catId) || current.categories[0];
+  if (!cat){ showToast('没有可用分类，无法还原'); return; }
+  if (findNote(item.note.id)) item.note.id = genId('n');
+  cat.notes.unshift(item.note);
+  trash.splice(idx, 1); saveTrash(trash);
+  persist();
+  renderSidebar(); renderList(); renderNote(); updateHash();
+  showToast('已还原到分类「' + cat.name + '」');
+  openTrash();
+  maybePush();
+}
+function destroyTrashItem(idx){
+  var trash = loadTrash();
+  var item = trash[idx];
+  if (!item) return;
+  if (!confirm('彻底删除「' + (item.note.title || '未命名') + '」？此操作不可恢复。')) return;
+  trash.splice(idx, 1); saveTrash(trash);
+  showToast('已彻底删除');
+  openTrash();
+}
+function emptyTrash(){
+  var trash = loadTrash();
+  if (!trash.length) return;
+  if (!confirm('确定清空回收站？' + trash.length + ' 篇笔记将被彻底删除，不可恢复。')) return;
+  saveTrash([]);
+  showToast('回收站已清空');
+  openTrash();
+}
+function restoreBackup(){
+  var snap = loadBackup();
+  if (!snap || !snap.data){ showToast('没有可还原的快照'); return; }
+  if (!confirm('还原快照将用之前备份的内容覆盖当前全部笔记，确定继续？')) return;
+  current = normalizeData(cloneData(snap.data));
+  persist();
+  state.cat = 'all'; state.note = null; state.query = ''; state.tag = null;
+  document.getElementById('searchInput').value = '';
+  renderSidebar(); renderList(); renderNote(); updateHash();
+  showToast('已还原到上一份快照');
+  openTrash();
   maybePush();
 }
 var selectedIcon = 'folder';
@@ -2044,6 +2264,7 @@ function importData(file){
       var d = JSON.parse(reader.result);
       if (!d || !Array.isArray(d.categories)) throw new Error('bad');
       if (!confirm('导入将用备份内容覆盖当前设备上的全部笔记，确定继续吗？')) return;
+      saveBackup('导入备份前');
       current = normalizeData(d);
       persist();
       state.cat = 'all'; state.note = null; state.query = ''; state.tag = null;
@@ -2160,6 +2381,7 @@ async function cloudPull(){
   catch(e){ throw new Error('密码错误，无法解密云端笔记（请确认填写的是当初加密用的同一个密码）'); }
   normalizeData(data);
   lastSha = j.sha;
+  recordSyncState({ lastPullAt: new Date().toISOString() });
   return { exists:true, data:data };
 }
 async function cloudPush(data){
@@ -2200,14 +2422,24 @@ function hideSyncStatus(){
   var el = document.getElementById('syncStatus');
   if (el) el.hidden = true;
 }
-async function maybePush(){
+var pushTimer = null;
+async function doPushNow(){
   if (!sync) return;
   try {
     await cloudPush(current);
+    var now = new Date().toISOString();
+    recordSyncState({ lastPushAt: now, lastOkAt: now, lastError: '' });
     setSyncStatus('on', '已同步到云端');
   } catch(e){
-    setSyncStatus('error', '云端同步失败：' + (e && e.message ? e.message : '未知错误'));
+    var msg = e && e.message ? e.message : '未知错误';
+    recordSyncState({ lastError: msg, lastErrorAt: new Date().toISOString() });
+    setSyncStatus('error', '云端同步失败：' + msg);
   }
+}
+function maybePush(){
+  if (!sync) return;
+  if (pushTimer) clearTimeout(pushTimer);
+  pushTimer = setTimeout(doPushNow, 12000);
 }
 async function syncFromCloud(){
   if (!sync) return;
@@ -2215,6 +2447,7 @@ async function syncFromCloud(){
   try {
     var r = await cloudPull();
     if (r.exists){
+      saveBackup('从云端获取前');
       current = r.data;
       persist();
       state.cat = 'all'; state.note = null; state.query = ''; state.tag = null;
@@ -2252,6 +2485,21 @@ function renderSyncPanel(){
     var diag = '环境：加密' + (cryptoOk ? '可用' : '不可用') + ' · 本地存储' + (lsOk ? '可用' : '不可用') +
       '；Token：' + escapeHtml(tok.slice(0, 10)) + '…（共 ' + tok.length + ' 位）';
     document.getElementById('syncDiag').textContent = diag;
+    var st = loadSyncState();
+    var stateEl = document.getElementById('syncState');
+    var parts = [];
+    if (st.lastPushAt) parts.push('上次上传 ' + fmtTime(st.lastPushAt));
+    if (st.lastPullAt) parts.push('上次获取 ' + fmtTime(st.lastPullAt));
+    if (st.lastError){
+      stateEl.innerHTML = '上次失败：' + escapeHtml(st.lastError) + (st.lastErrorAt ? '（' + escapeHtml(fmtTime(st.lastErrorAt)) + '）' : '');
+      stateEl.style.color = '#e11d48';
+    } else if (parts.length){
+      stateEl.textContent = parts.join(' · ');
+      stateEl.style.color = '';
+    } else {
+      stateEl.textContent = '尚未同步过';
+      stateEl.style.color = '';
+    }
   } else {
     setup.hidden = false; panel.hidden = true; saveBtn.hidden = false;
   }
@@ -2282,6 +2530,7 @@ async function syncPullNow(){
   try {
     var r = await cloudPull();
     if (r.exists){
+      saveBackup('从云端获取前');
       current = r.data;
       persist();
       state.cat='all'; state.note=null; state.query=''; state.tag=null;
@@ -2298,13 +2547,17 @@ async function syncPullNow(){
   }
 }
 async function syncPushNow(){
+  if (pushTimer){ clearTimeout(pushTimer); pushTimer = null; }
   setSyncStatus('loading', '正在上传…');
   try {
     await cloudPush(current);
+    var now = new Date().toISOString();
+    recordSyncState({ lastPushAt: now, lastOkAt: now, lastError: '' });
     setSyncStatus('on', '已上传到云端');
     showToast('已上传到云端');
   } catch(e){
     var msg = e && e.message ? e.message : '上传失败';
+    recordSyncState({ lastError: msg, lastErrorAt: new Date().toISOString() });
     setSyncStatus('error', msg);
     showToast(msg);
   }
@@ -2425,9 +2678,25 @@ function bind(){
 
   /* 编辑 */
   document.getElementById('writeBtn').addEventListener('click', function(){ openEditor('new', null); });
-  document.getElementById('edCancel').addEventListener('click', closeEditor);
+  document.getElementById('edCancel').addEventListener('click', requestCloseEditor);
   document.getElementById('edSave').addEventListener('click', saveNote);
   document.getElementById('edDelete').addEventListener('click', deleteNote);
+  /* 草稿自动暂存 + 离开提醒 */
+  var draftTimer = null;
+  function markDirty(){
+    editor.dirty = true;
+    if (draftTimer) clearTimeout(draftTimer);
+    draftTimer = setTimeout(saveDraft, 800);
+  }
+  ['edTitle','edTags'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', markDirty);
+  });
+  document.getElementById('edContent').addEventListener('input', markDirty);
+  window.addEventListener('beforeunload', function(e){
+    if (editor.dirty && !document.getElementById('editorMask').hidden && !draftEmpty()){
+      e.preventDefault(); e.returnValue = '';
+    }
+  });
   /* 编辑器点击外面不关闭，只能点X/取消 */
   /* 编辑器工具栏（富文本） */
   document.querySelectorAll('.ed-toolbar [data-cmd]').forEach(function(btn){
@@ -2438,7 +2707,6 @@ function bind(){
       else if (cmd === 'italic') execCmd('italic');
       else if (cmd === 'h2') execCmd('formatBlock', 'h2');
       else if (cmd === 'list') execCmd('insertUnorderedList');
-      else if (cmd === 'quote') execCmd('formatBlock', 'blockquote');
       else if (cmd === 'task') insertTaskItem();
     });
   });
@@ -2570,6 +2838,35 @@ function bind(){
   /* 编辑器打开时隐藏浮窗 */
   document.getElementById('edCancel').addEventListener('click', hideFloatBar);
   document.getElementById('edSave').addEventListener('click', hideFloatBar);
+  /* 粘贴净化：过滤不安全标签、事件属性和危险样式 */
+  edContent.addEventListener('paste', function(e){
+    var clip = e.clipboardData || window.clipboardData;
+    if (!clip) return;
+    e.preventDefault();
+    var html = clip.getData('text/html');
+    var text = clip.getData('text/plain');
+    var sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    var range = sel.getRangeAt(0);
+    range.deleteContents();
+    var frag = document.createDocumentFragment();
+    if (html){
+      var tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      sanitizeFragment(tmp);
+      while (tmp.firstChild) frag.appendChild(tmp.firstChild);
+    } else if (text){
+      text.split(/\r\n|\r|\n/).forEach(function(line){
+        var p = document.createElement('p');
+        p.textContent = line;
+        frag.appendChild(p);
+      });
+    } else { return; }
+    range.insertNode(frag);
+    range.collapse(false);
+    sel.removeAllRanges(); sel.addRange(range);
+    markDirty();
+  });
   /* 编辑器内待办方框点击勾选 */
   document.getElementById('edContent').addEventListener('click', function(e){
     var box = e.target.closest('.task-item .box');
@@ -2622,6 +2919,19 @@ function bind(){
     this.value = '';
   });
 
+  /* 回收站与兜底快照 */
+  document.getElementById('trashBtn').addEventListener('click', openTrash);
+  document.getElementById('trashCloseBtn').addEventListener('click', function(){ document.getElementById('trashMask').hidden = true; });
+  document.getElementById('trashMask').addEventListener('click', function(e){ if (e.target === this) this.hidden = true; });
+  document.getElementById('restoreBackupBtn').addEventListener('click', restoreBackup);
+  document.getElementById('emptyTrashBtn').addEventListener('click', emptyTrash);
+  document.getElementById('trashList').addEventListener('click', function(e){
+    var r = e.target.closest('[data-restore]');
+    if (r){ restoreTrashItem(parseInt(r.getAttribute('data-restore'), 10)); return; }
+    var d = e.target.closest('[data-destroy]');
+    if (d){ destroyTrashItem(parseInt(d.getAttribute('data-destroy'), 10)); }
+  });
+
   /* 云同步 */
   document.getElementById('syncBtn').addEventListener('click', openSync);
   document.getElementById('syncCancel').addEventListener('click', closeSync);
@@ -2649,7 +2959,7 @@ function bind(){
       e.preventDefault(); search.focus();
     }
     if (e.key === 'Escape'){
-      if (!document.getElementById('editorMask').hidden){ closeEditor(); return; }
+      if (!document.getElementById('editorMask').hidden){ requestCloseEditor(); return; }
       document.body.classList.remove('drawer-open');
       if (window.innerWidth <= 720 && document.body.classList.contains('reading')) closeReading();
     }
